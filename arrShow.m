@@ -171,7 +171,7 @@ classdef arrShow < handle
     
     properties (Constant, GetAccess = public)
         % arrShow version
-        VERSION = 0.33;
+        VERSION = 0.34;
     end
     
     %#ok<*FPARK>
