@@ -733,8 +733,23 @@ classdef asDataClass < handle
         end
         
         function arr = cell2imageMat(cellArr)
+            % converts a cell array of images into a respective matrix.
+            % All "images" in the cell array must have the same dimensions.
+            % Empty cell content is automatically removed
             
             fprintf('isolating images from input cell vector...');
+            
+            % check for empty cells
+            emptyCells = cellfun(@isempty,cellArr);
+            if any(emptyCells)
+                if all(emptyCells)
+                    error('asDataClass:cell2imageMat','input cell array is empty');
+                else
+                    % remove empty cells
+                    warning('asDataClass:validateImageArray','Removing empty cells from input array. The frame indices may be shifted respectively.');                                        
+                    cellArr(emptyCells) = [];
+                end
+            end
             
             % check if first cell content has at least 2 dimensions
             refSi = size(cellArr{1});
