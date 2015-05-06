@@ -732,34 +732,19 @@ classdef asDataClass < handle
             end
         end
         
-<<<<<<< HEAD
-        function arr = cell2imageMat(cellArr)
-            % converts a cell array of images into a respective matrix.
-            % All "images" in the cell array must have the same dimensions.
-            % Empty cell content is automatically removed
-=======
         function arr = cell2imageMat(cellArr, zerofillEmptyCells)
             % converts a cell array of images into a respective matrix.
             % All "images" in the cell array must have the same dimensions.
             % Empty cell content is automatically removed or zerofilled
-            % according to the zerofillEmptyCells toggle
->>>>>>> asDataClass: made cell2imageMat automatically remove or zerofill empty cell elements
-            
+            % according to the zerofillEmptyCells toggle           
             fprintf('isolating images from input cell vector...');
             
-            % check for empty cells
-<<<<<<< HEAD
-            emptyCells = cellfun(@isempty,cellArr);
-            if any(emptyCells)
-                if all(emptyCells)
-                    error('asDataClass:cell2imageMat','input cell array is empty');
-                else
-                    % remove empty cells
-                    warning('asDataClass:validateImageArray','Removing empty cells from input array. The frame indices may be shifted respectively.');                                        
-                    cellArr(emptyCells) = [];
-                end
+            % zerofill empty cells by default
+            if nargin < 2
+                zerofillEmptyCells = true;
             end
-=======
+            
+            % check for empty cells
             emptyCells = cellfun(@isempty,cellArr);            
             if all(emptyCells)
                 error('asDataClass:cell2imageMat','input cell array is empty');
@@ -773,9 +758,7 @@ classdef asDataClass < handle
                 cellArr(emptyCells) = [];
                 refCellNr = 1;
             end
-            
->>>>>>> asDataClass: made cell2imageMat automatically remove or zerofill empty cell elements
-            
+                        
             % check if first cell content has at least 2 dimensions
             refSi = size(cellArr{refCellNr});
             if length(refSi) >= 2
