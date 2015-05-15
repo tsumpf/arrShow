@@ -220,6 +220,10 @@ classdef asDataClass < handle
         function mean(obj,dim)
             obj.applyDimFun(dim,@mean);
         end
+
+        function prod(obj,dim)
+            obj.applyDimFun(dim,@prod);
+        end
         
         function max(obj,dim)
             funPtr = @(x,d)max(x,[],d);
@@ -232,8 +236,7 @@ classdef asDataClass < handle
         end
         
         function coilCombine(obj,dim)
-            funPtr = @(x,d)coilCombineMarkus(x,d);
-            obj.applyDimFun(dim,funPtr);
+            obj.applyDimFun(dim,@coilCombineMarkus);
         end
             
         
