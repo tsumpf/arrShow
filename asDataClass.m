@@ -220,6 +220,10 @@ classdef asDataClass < handle
         function mean(obj,dim)
             obj.applyDimFun(dim,@mean);
         end
+
+        function prod(obj,dim)
+            obj.applyDimFun(dim,@prod);
+        end
         
         function max(obj,dim)
             funPtr = @(x,d)max(x,[],d);
@@ -230,6 +234,11 @@ classdef asDataClass < handle
             funPtr = @(x,d)min(x,[],d);
             obj.applyDimFun(dim,funPtr);
         end
+        
+        function coilCombine(obj,dim)
+            obj.applyDimFun(dim,@coilCombineMarkus);
+        end
+            
         
         
         function squeeze(obj)
@@ -681,26 +690,56 @@ classdef asDataClass < handle
             end
         end
         
-        function arr = cell2imageMat(cellArr)
-            
+        function arr = cell2imageMat(cellArr, zerofillEmptyCells)
+            % converts a cell array of images into a respective matrix.
+            % All "images" in the cell array must have the same dimensions.
+            % Empty cell content is automatically removed or zerofilled
+            % according to the zerofillEmptyCells toggle           
             fprintf('isolating images from input cell vector...');
             
+            % zerofill empty cells by default
+            if nargin < 2
+                zerofillEmptyCells = true;
+            end
+            
+            % check for empty cells
+            emptyCells = cellfun(@isempty,cellArr);            
+            if all(emptyCells)
+                error('asDataClass:cell2imageMat','input cell array is empty');
+            end
+            if zerofillEmptyCells
+                % get the first non-empty cell as reference
+                refCellNr = find(emptyCells == 0, 1, 'first');
+            else
+                % remove empty cells
+                warning('asDataClass:validateImageArray','Removing empty cells from input array. The frame indices may be shifted respectively.');                                        
+                cellArr(emptyCells) = [];
+                refCellNr = 1;
+            end
+                        
             % check if first cell content has at least 2 dimensions
-            refSi = size(cellArr{1});
+            refSi = size(cellArr{refCellNr});
             if length(refSi) >= 2
                 refN = prod(refSi);
             else
                 error('asDataClass:cell2imageMat','arrays in input cell must be at least 2 dimensional');
             end
+            refCellDataClass = class(cellArr{refCellNr});
             
             % if all other cells contain arrays with same number of
             % elements, sort them into an image array
-            arr = zeros([refN,numel(cellArr)]);
+            arr = zeros([refN,numel(cellArr)], refCellDataClass);
             for i = 1 : numel(cellArr)
                 if numel(cellArr{i}) == refN
                     arr(:,i) = cellArr{i}(:);
                 else
-                    error('asDataClass:cell2imageMat','arrays in input cell have different size');
+                    if isempty(cellArr{i})
+                        % if there is still empty cell content, and we got 
+                        % to this point, we probably want arr(:,i) to stay
+                        % zero, so do nothing
+                    else
+                        error('asDataClass:cell2imageMat','arrays in input cell have different size');
+                    end
                 end
             end
             si  = [refSi, squeeze(size(cellArr))];

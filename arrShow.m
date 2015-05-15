@@ -3033,7 +3033,25 @@ classdef arrShow < handle
             % 'colormapeditor'. The 'cmapMightBeModified' workaround causes
             % arrayShow to retrieve the potentially modified from the
             % figure handle during updFig.
-            colormapeditor(obj.fh);
+            if verLessThan('matlab','8.4')
+                colormapeditor(obj.fh);
+            else
+                % why the hell did mathworks remove the option to pass the
+                % figure handle to the colormapeditor ?!?
+                % ...ok, workaround:
+                %
+                % enable the handle visibility
+                set(obj.fh,'HandleVisibility','on');
+                
+                % make the arrayShow figure the current one
+                figure(obj.fh)
+                
+                % call the colormapeditor
+                colormapeditor;
+                
+                % disable the handle visibility
+                set(obj.fh,'HandleVisibility','off');                                    
+            end
             
             if strcmp(obj.complexSelect.getSelection,'Pha')
                 obj.phaCmapMightBeModified = true;
