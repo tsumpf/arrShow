@@ -399,29 +399,38 @@ classdef asWindowingClass < handle
         end
         
         function setRangeCalcMethod(obj, method)
+            % setRangeCalcMethod(obj, method)
+            % Sets how the windowing range is calculated
+            % method can be either a nunber or a string:
+            %   0 : 'manual'
+            %   1 : 'min/max' (default)
+            %   2 : 'percentile'
+                        
             switch method
-                case 0 % manual
+                case {0,'manual'} % manual
                     set(obj.cmh.rangeCalcManu,'checked','on');
                     set(obj.cmh.rangeCalcMiMa,'checked','off');
                     set(obj.cmh.rangeCalcPerc,'checked','off');
                     set(obj.filterButtonH,'Value',0);
                     obj.overwriteSliderLimits();
+                    obj.rangeCalcMethod = 0;
                     return;
-                case 1 % min/max
+                case {1,'min/max'} % min/max
                     set(obj.cmh.rangeCalcManu,'checked','off');
                     set(obj.cmh.rangeCalcMiMa,'checked','on');
                     set(obj.cmh.rangeCalcPerc,'checked','off');
                     set(obj.filterButtonH,'Value',0);
-                case 2 % percentile
+                    obj.rangeCalcMethod = 1;
+                case {2,'percentile'} % percentile
                     set(obj.cmh.rangeCalcManu,'checked','off');
                     set(obj.cmh.rangeCalcMiMa,'checked','off');
                     set(obj.cmh.rangeCalcPerc,'checked','on');
                     set(obj.filterButtonH,'Value',1);
+                    obj.rangeCalcMethod = 2;
                 otherwise
                     error('asWindowingClass:invalidMethod','Invalid range calc method %d',obj.rangeCalcMethod);
                     
             end
-            obj.rangeCalcMethod = method;
             obj.updateDataRange();
         end
         
