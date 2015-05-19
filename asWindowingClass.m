@@ -581,7 +581,7 @@ classdef asWindowingClass < handle
             % it seems to leave orphant java classes in the matlab sessions
             % which can become a problem when trying to get rid of old
             % arrayShow instances)
-            hJScrollBar = findjobj('depth',15,'nomenu','Class','Slider');
+            hJScrollBar = findjobj('depth',19,'nomenu','Class','Slider');
             hJScrollBar(1).AdjustmentValueChangedCallback = @(src, evnt)obj.sliderCb;
             hJScrollBar(2).AdjustmentValueChangedCallback = @(src, evnt)obj.sliderCb; %#ok<NASGU> it is used :)
             clear('hJScrollBar');
