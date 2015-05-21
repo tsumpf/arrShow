@@ -1207,11 +1207,16 @@ classdef arrShow < handle
         end
 
         function n  = getFigureNumber(obj)
-            if verLessThan('matlab','8.4.0')
+            if isnumeric(obj.fh)
+                % originally I used "verLessThan('matlab','8.4.0')" here.
+                % However, this fails when recreating an object which was
+                % stored in a previous matlab version but is opened in a
+                % new matlab version :-/
                 n = obj.fh;
             else
                 n = obj.fh.Number;
             end                
+
         end
         
         function ah  = getCurrentAxesHandle(obj)
