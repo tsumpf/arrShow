@@ -593,10 +593,10 @@ classdef asDataClass < handle
         
         function args = struct2varargin(dat)
             fields = fieldnames(dat);
-            args = cell(numel(fields),2);
-            args(:,1) = fields;
+            args = cell(2, numel(fields));
+            args(1,:) = fields;
             for i = 1 : numel(fields)
-                args{i,2} = dat.(fields{i});
+                args{2,i} = dat.(fields{i});
             end                        
         end
         

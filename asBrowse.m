@@ -586,12 +586,31 @@ selObjs = getSelectedObjects(fh);
 
 % remove possible links to relatives and store objects position
 for i = 1 : length(selObjs)
-    selObjs(i).wipeRelativesList;
-    selObjs(i).storeFigurePosition;
+    if ~verLessThan('matlab','8.4.0')
+        % apparently, since matlab 2014b, saving objects containing
+        % graphic elements was sustantially changed. As a consequence
+        % the normal save commant now tries to recursively store all
+        % graphic objects. As almost all arrayShow subclasses 
+        % are linked to graphic elements, it is
+        % rather complicated to get rit of them prior saving. As a
+        % workaround, I currently just create a copy of the object
+        % and then delete the main figure graphic object (which
+        % automatically also deletes all parent graphics). The
+        % object can then be saved as in previous matlab versions.
+        % This sux a bit in terms of performance, but seems 
+        % to work for now.                    
+        selObjs(i) = selObjs(i).rebuildObject('renderUI',false);
+        delete(selObjs(i).getFigureHandle);
+    else    
+        selObjs(i).storeFigurePosition;            
+        selObjs(i).wipeRelativesList;
+    end
 end
 
 % copy objects to a variable named like the file
-eval([storeVarName, ' = selObjs;']);
+eval([storeVarName, ' = selObjs;']); % I didn't find a more elegant solution yet, since
+% "assignin('caller',...)" doesn't seem to work. If anyone
+% knows a better solution, let me know :)
 
 % ...write the variable to harddisk
 fprintf('saving data...   ');
