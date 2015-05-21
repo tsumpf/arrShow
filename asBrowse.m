@@ -599,7 +599,7 @@ for i = 1 : length(selObjs)
         % object can then be saved as in previous matlab versions.
         % This sux a bit in terms of performance, but seems 
         % to work for now.                    
-        selObjs(i) = selObjs(i).rebuildObject('init',false);
+        selObjs(i) = selObjs(i).rebuildObject('renderUI',false);
         delete(selObjs(i).getFigureHandle);
     else    
         selObjs(i).storeFigurePosition;            

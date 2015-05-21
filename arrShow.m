@@ -1953,7 +1953,7 @@ classdef arrShow < handle
                     % object can then be saved as in previous matlab versions.
                     % This sux a bit in terms of performance, but seems 
                     % to work for now.                
-                    cpObj = obj.rebuildObject('init',false);
+                    cpObj = obj.rebuildObject('renderUI',false);
                     delete(cpObj.getFigureHandle);
                 end
                                 
