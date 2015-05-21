@@ -189,6 +189,7 @@ classdef arrShow < handle
             imageTextVal = [];
             initComplexSelect = [];
             infoText = '';
+            renderUi = true;
             if nargin > 1
                 if length(varargin) ==1
                     obj.title = varargin{1};
@@ -232,6 +233,13 @@ classdef arrShow < handle
                             obj.userCallback =  option_value;
                         case 'useglobalarray'
                             obj.useGlobalArray = option_value;
+                        case 'renderui' % this option has been introduced
+                            % to initialize an arrShow object without
+                            % drawing the actual ui elements. This is
+                            % currently used to create temporary object 
+                            % copies which are saveable in matlab >= 2014b
+                            renderUi = option_value;
+                            
                         otherwise
                             error('arrShow:varargin','unknown option [%s]!\n',option);
                     end;
@@ -437,7 +445,7 @@ classdef arrShow < handle
             % all gui components should be ready by now, so start
             % updateFigure to find the selected array part and convert it
             % to an image object in the axes region
-            if obj.updFigCount == 0
+            if obj.updFigCount == 0 && renderUi
                 % for new figures, updFig sometimes seems to be triggered
                 % when setting the figure resize function...
                 % I haven't figured why and when exactly that happens.
@@ -468,9 +476,14 @@ classdef arrShow < handle
                     end
                 end
                 obj.createImageText(imageTextVal);
-                obj.updFig
+                if renderUi
+                    obj.updFig
+                end
             end
             
+            if ~renderUi
+                return;
+            end
             
             % save figure position in the object property (pixel units) and activate
             % figure resize function
@@ -1214,9 +1227,12 @@ classdef arrShow < handle
                 % new matlab version :-/
                 n = obj.fh;
             else
-                n = obj.fh.Number;
+                if isvalid(obj.fh)
+                    n = obj.fh.Number;
+                else
+                    n = 0;
+                end
             end                
-
         end
         
         function ah  = getCurrentAxesHandle(obj)
@@ -1495,12 +1511,11 @@ classdef arrShow < handle
             bool = arrShow.onOffToBool(get(obj.tbh.lock,'state'));
         end
         
-        function obj = rebuildObject(obj)
+        function obj = rebuildObject(obj, varargin)
             
             for i = 1 : length(obj)
                 
-                obj(i) = arrShow(obj(i).getAllImages,...
-                    'title',          obj(i).getFigureTitle,...
+                pars = {'title',          obj(i).getFigureTitle,...
                     'info',           obj(i).infotext.getString,...
                     'window',         obj(i).window.getCW(),...
                     'select',         obj(i).selection.getValue,...
@@ -1508,7 +1523,9 @@ classdef arrShow < handle
                     'stdcolormap',    obj(i).getColormap('standard'),...
                     'phasecolormap',  obj(i).getColormap('phase'),...
                     'position',       obj(i).getFigurePosition,...
-                    'useglobalarray', obj(i).useGlobalArray);
+                    'useglobalarray', obj(i).useGlobalArray};
+                pars = [pars, varargin]; %#ok<AGROW>
+                obj(i) = arrShow(obj(i).getAllImages, pars{:});
                 
                 if ~isempty(obj(i).UserData)
                     obj(i).UserData = obj(i).UserData;
@@ -1915,14 +1932,36 @@ classdef arrShow < handle
                 % without the tailing '.mat'
                 storeVarName = textscan(file,'%s %s','delimiter','.');
                 storeVarName = storeVarName{1}{1};
+                               
                 
-                % remove possible links to relatives and store objects position
-                obj.wipeRelativesList;
-                obj.storeFigurePosition;
-                
+                if verLessThan('matlab','8.4.0')
+                    cpObj = obj;
+    
+                    % remove possible links to relatives and store objects position
+                    cpObj.wipeRelativesList;
+                    cpObj.storeFigurePosition;                                    
+                else
+                    % apparently, since matlab 2014b, saving objects containing
+                    % graphic elements was sustantially changed. As a consequence
+                    % the normal save commant now tries to recursively store all
+                    % graphic objects. As almost all arrayShow subclasses 
+                    % are linked to graphic elements, it is
+                    % rather complicated to get rit of them prior saving. As a
+                    % workaround, I currently just create a copy of the object
+                    % and then delete the main figure graphic object (which
+                    % automatically also deletes all parent graphics). The
+                    % object can then be saved as in previous matlab versions.
+                    % This sux a bit in terms of performance, but seems 
+                    % to work for now.                
+                    cpObj = obj.rebuildObject('init',false);
+                    delete(cpObj.getFigureHandle);
+                end
+                                
                 % copy objects to a variable named like the file
-                eval([storeVarName, ' = obj;']);
-                
+                eval([storeVarName, ' = cpObj;']); % I didn't find a more elegant solution yet, since
+                % "assignin('caller',...)" doesn't seem to work. If anyone
+                % knows a better solution, let me know :)
+                                                                
                 % ...write the variable to harddisk
                 fprintf('saving data...   ');
                 tic;
@@ -3067,6 +3106,9 @@ classdef arrShow < handle
         
     end
     methods (Access = protected)
+        function cpObj = copyElement(obj)
+            cpObj = copyElement@matlab.mixin.Copyable(obj);
+        end
         
         function closeReq(obj, src)
             obj.msg('executing close request from handle %d\n',src);
@@ -3972,19 +4014,24 @@ classdef arrShow < handle
             global asObjs;
             
             if isa(arr,'arrShow');
-                newObj = arr.rebuildObject;
+                newObj = arr.rebuildObject(varargin{:});
             else
                 if  isa(arr,'arrShow2') || isa(arr,'arrShow3')
                     % for backward compatibility
                     newObj = arrShow.convertAs2Obj(arr);
                 else
+                    
                     if isa(arr,'struct') && isfield(arr,'dat')
                         % arr seems to be an "arrayShow struct"
-                        dat = arr.('dat');
-                        arr = rmfield(arr,'dat');
-                        args = asDataClass.struct2varargin(arr);
-                        newObj = arrShow(dat, args{:});
-                    else
+                        newObj = [];
+                        for i = 1 : length(arr)
+                            curr = arr(i);
+                            dat = curr.('dat');
+                            curr = rmfield(curr,'dat');
+                            args = asDataClass.struct2varargin(curr);
+                            newObj = [newObj, arrShow(dat, args{:})]; %#ok<AGROW>
+                        end
+                    else                    
                         % default case
                         newObj = arrShow(arr, varargin{:});
                     end
