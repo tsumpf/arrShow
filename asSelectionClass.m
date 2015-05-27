@@ -54,6 +54,7 @@ classdef asSelectionClass < handle
             
             
             % evaluate varagin
+            offsets = [];
             if nargin > 2
                 for i=1:floor(length(varargin)/2)
                     option=varargin{i*2-1};
@@ -69,6 +70,8 @@ classdef asSelectionClass < handle
                             obj.data = option_value;
                         case 'sendicon'
                             obj.sendIcon = option_value;
+                        case 'offsets'
+                            offsets = option_value;                            
                         otherwise
                             warning('asSelectionClass:unknownOption',...
                                 'unknown option [%s]!\n',option);
@@ -86,6 +89,11 @@ classdef asSelectionClass < handle
             
             % initialize array of valueChanger objects
             obj.initValueChangerArray();
+            
+            % consider the offset
+            if ~isempty(offsets)
+                obj.setOffsets(offsets, false);
+            end
             
             
         end
@@ -124,6 +132,7 @@ classdef asSelectionClass < handle
                         if currColonDim ~= id
                             % deactivate old colonDim1
                             obj.vcos{i}.setColonDimTag(0, true);
+                            return;  % (don't need to check the remaining vcos)
                         end
                     end
                 end
@@ -140,6 +149,7 @@ classdef asSelectionClass < handle
                         if currColonDim ~= id
                             % deactivate old colonDim1
                             obj.vcos{i}.setColonDimTag(0, true);
+                            return;  % (don't need to check the remaining vcos)
                         end
                     end
                 end
@@ -235,6 +245,29 @@ classdef asSelectionClass < handle
                     end
                 end
             end
+        end
+        
+        function offs = getOffsets(obj)
+            noVcos = length(obj.dims);
+            offs = zeros(noVcos,1);
+            for i = 1 : noVcos
+                offs(i) = obj.vcos{i}.getOffset();
+            end            
+        end
+
+        function setOffsets(obj, offs, runCb)
+            if nargin < 3 || isempty(runCb)
+                runCb = true;
+            end
+                
+            noVcos = length(obj.dims);
+            if length(offs(:)) ~= noVcos
+                fprintf('Length of the offset vector has to be equal to the number of value changer (i.e.: %d)',noVcos);
+                return;
+            end
+            for i = 1 : noVcos
+                obj.vcos{i}.setOffset(offs(i), runCb);
+            end            
         end
         
         function setColonDimDivisor(obj,divi)

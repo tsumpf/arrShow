@@ -30,6 +30,7 @@ classdef arrShow < handle
         window          = [];               % image windowing object
         roi             = [];               % region of interest object
         imageText       = [];               % image text object
+        markers         = [];               % pixel markers
         
         UserData        = [];               % this is not used within this class
         % and may be set and
@@ -185,7 +186,9 @@ classdef arrShow < handle
             % evaluate varagin
             CW = [];
             userFigurePosition = [];
+            selectionOffset = [];
             selectedImageStr = '';
+            pixMarkers = [];
             imageTextVal = [];
             initComplexSelect = [];
             infoText = '';
@@ -238,7 +241,11 @@ classdef arrShow < handle
                             % drawing the actual ui elements. This is
                             % currently used to create temporary object 
                             % copies which are saveable in matlab >= 2014b
-                            renderUi = option_value;
+                            renderUi = option_value;                            
+                        case 'offset' % offset to the asSelection class
+                            selectionOffset = option_value;                            
+                        case 'markers' % pixel markers
+                            pixMarkers = option_value;
                             
                         otherwise
                             error('arrShow:varargin','unknown option [%s]!\n',option);
@@ -349,7 +356,7 @@ classdef arrShow < handle
             
             % info textbox object
             obj.infotext = asInfoTextClass(obj.cph, obj.INFOTEXT_POS);
-            
+                        
             % complex part selector (the dropdown menu on the top right of
             % the arrayShow window)
             obj.complexSelect = asCmplxChooserClass(...
@@ -404,6 +411,7 @@ classdef arrShow < handle
                 'apply2allCb',@obj.applyToRelatives,...
                 'InitStrings',initStrings,...
                 'dataObject',obj.data,...
+                'offsets', selectionOffset,...
                 'sendIcon',obj.icons.send);
             obj.data.linkToSelectionClassObject(obj.selection);
             
@@ -422,6 +430,11 @@ classdef arrShow < handle
             if ~isempty(selectedImageStr)
                 obj.selection.setValue(selectedImageStr,true,true,true);
             end
+            
+            
+            % pixel markers
+            obj.markers = asMarkerClass(obj.selection, pixMarkers, obj.mbh.markers);
+            
             
             % if specific figure position is given, resize the gui
             if ~isempty(userFigurePosition)
@@ -481,9 +494,10 @@ classdef arrShow < handle
                 end
             end
             
+            
             if ~renderUi
                 return;
-            end
+            end            
             
             % save figure position in the object property (pixel units) and activate
             % figure resize function
@@ -2654,18 +2668,22 @@ classdef arrShow < handle
             
             
             
-            % view
-            mb_view = uimenu(obj.fh,'Label','View');
+            % view --
+            mb_view = uimenu(obj.fh,'Label','View');            
+            
+            % markers
+            obj.mbh.markers = uimenu(mb_view,'Label','Markers' );                        
+            
+            % aspect ratio etc...
             obj.mbh.aspectRatio = uimenu(mb_view,'Label','Keep aspect ratio' ,...
                 'callback',@(src,evnt)obj.toggleAspectRatio(),...
-                'Checked','on');
+                'Checked','on','Separator','on');
             obj.mbh.trueSize = uimenu(mb_view,'Label','Keep true size' ,...
                 'callback',@(src,evnt)obj.toggleTrueSize(),...
                 'Checked','off');
             obj.mbh.quiver = uimenu(mb_view,'Label','Show vector plot' ,...
                 'callback',@(src,evnt)obj.toggleUseQuiver(),...
-                'Checked','off');
-            
+                'Checked','off');            
             
             % zoom
             cmh_zoom = uimenu(mb_view,'Label','Set zoom' ,...
@@ -3415,6 +3433,9 @@ classdef arrShow < handle
                                         
                 end
             end
+            
+            % update pixel markers
+            obj.markers.updateAxesHandles(allAxes);
             
             % insert colorbar (if the respective button is enabled)
             if strcmp( get(obj.tbh.colorbar,'State'), 'on')

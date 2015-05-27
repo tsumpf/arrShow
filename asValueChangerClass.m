@@ -404,12 +404,14 @@ classdef asValueChangerClass < handle
                     obj.colonDimTag = tag;
                     switch tag
                         case 1
-                            set(obj.pbh_dim,'ForegroundColor',obj.tag1Color);
-                            obj.colonDim1Callback(obj.id);
+                            obj.setOffset(0, false);  % deactivate possible previous offsets                           
+                            set(obj.pbh_dim,'ForegroundColor',obj.tag1Color); % set the text color
+                            obj.colonDim1Callback(obj.id);  % tell the asSelection class about the change, so that it can deactivate the previous colon dim. 
                             obj.setStrForce(obj.colonStr);
                         case 2
-                            set(obj.pbh_dim,'ForegroundColor',obj.tag2Color);
-                            obj.colonDim2Callback(obj.id);
+                            obj.setOffset(0, false);  % deactivate possible previous offsets                           
+                            set(obj.pbh_dim,'ForegroundColor',obj.tag2Color); % set the text color
+                            obj.colonDim2Callback(obj.id); % tell the asSelection class about the change, so that it can deactivate the previous colon dim. 
                             obj.setStrForce(obj.colonStr);
                         case 0
                             set(obj.pbh_dim,'ForegroundColor',obj.tag0Color);
@@ -477,7 +479,14 @@ classdef asValueChangerClass < handle
             % (this can be useful when sending an image
             % selection number to other windows with the
             % different numbers of resolution or FOV)
-
+            
+            % run "userCb (meaning updateFig) by default (I should change
+            % the naming some day. The term "userCb" was choosen before
+            % everything became arrayShow specific anyway)
+            if nargin < 3 || isempty(runUserCb)
+                runUserCb = true;
+            end
+            
             % if no offset is give, open input dialog
             if nargin < 2
                 offs = mydlg('Enter offset','Offset input dlg',obj.offset);
@@ -486,21 +495,32 @@ classdef asValueChangerClass < handle
                 end
                 offs = str2double(offs);
             end                
-            
+           
             % if the offset is 0, set background color of the edit text field to default
             if isempty(offs) || offs == 0
-                set(obj.eth,'BackgroundColor',get(0,'defaultuicontrolbackgroundcolor'));
+                set(obj.eth,'BackgroundColor',get(0,'defaultuicontrolbackgroundcolor'));                
             else
                 % else, change the color
                 set(obj.eth,'backgroundcolor',obj.offsetColor);                
             end
             
-            % get the current selection string
-            origSelStr = obj.getStr(true);
-
             % adapt the value changer limits
             obj.min = 1 - offs;
-            obj.max = str2double(get(obj.pbh_dim,'String')) - offs;            
+            obj.max = str2double(get(obj.pbh_dim,'String')) - offs;                        
+            
+            % if the dimension is a colon dim and the offset is 0...
+            if obj.getColonDimTag > 0 && offs == 0
+                % store the new offset in the object properties and just
+                % return
+                obj.offset = offs;                
+                return;
+            end
+            
+            % ...otherwise adapt the selected value to match the same frame
+            % considering the offset (if the dim is a colon dim, we just select the first frame)...
+            
+            % get the current selection string considering the old offset
+            origSelStr = obj.getStr(true);                
             
             % add the offset to the value in the string (to keep the
             % actually selected frame constant)
@@ -513,10 +533,13 @@ classdef asValueChangerClass < handle
                 newSel = origSel - offs;
             end
             
-            obj.offset = offs;
-            if nargin < 3 || runUserCb == true
-                obj.setStr(newSel);
-            end
+            % store the new offset in the object properties
+            % (this has to be done AFTER the obj.getStr command above,
+            % since getStr already consideres the obj.offset property)
+            obj.offset = offs;                
+           
+            % set the new value to the edit text field
+            obj.setStr(newSel, runUserCb);            
         end
         
         function offs = getOffset(obj)
