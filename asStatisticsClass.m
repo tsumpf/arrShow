@@ -15,6 +15,7 @@ classdef asStatisticsClass < handle
         pph     = 0;            % parent panel handle
         ph      = 0;            % panel handle
         panPos     = [0 0 1 1]  % panel position
+        ah = []                 % axes handle of the reference image
         
         enabled = true;
         isComplex = false;
@@ -22,6 +23,11 @@ classdef asStatisticsClass < handle
         precision = '%2.4g';
         
         fontSize = 8;
+        
+        % handles for image points
+        minPointH = [];
+        maxPointH = [];
+        
         
         % text handles for 'dynamic text'
         thDim   = 0;
@@ -69,12 +75,18 @@ classdef asStatisticsClass < handle
             th  = 1/5;   % textfield heigth
             obj.sthDim = uicontrol('Style','Text','String','Dim :','HorizontalAlignment','left','FontSize',obj.fontSize,...
                 'Units','normalized','pos',[0 4/5 stw th],'parent',obj.ph,'HandleVisibility','on');
-            obj.sthMin = uicontrol('Style','Text','String','Min :','HorizontalAlignment','left','FontSize',obj.fontSize,...
+            
+            obj.sthMin = uicontrol('Style','togglebutton','String','Min :','HorizontalAlignment','left','FontSize',obj.fontSize,...
                 'Units','normalized','pos',[0 3/5 stw th],'parent',obj.ph,'HandleVisibility','on');
+            set(obj.sthMin,'callback',@(src,evnt)obj.setMarkMin(get(obj.sthMin,'value')));
+            
             obj.sthMean= uicontrol('Style','Text','String','Mean:','HorizontalAlignment','left','FontSize',obj.fontSize,...
                 'Units','normalized','pos',[0 2/5 stw th],'parent',obj.ph,'HandleVisibility','on');
-            obj.sthMax = uicontrol('Style','Text','String','Max :','HorizontalAlignment','left','FontSize',obj.fontSize,...
+            
+            obj.sthMax = uicontrol('Style','togglebutton','String','Max :','HorizontalAlignment','left','FontSize',obj.fontSize,...
                 'Units','normalized','pos',[0 1/5 stw th],'parent',obj.ph,'HandleVisibility','on');
+            set(obj.sthMax,'callback',@(src,evnt)obj.setMarkMax(get(obj.sthMax,'value')));
+            
             obj.sthNorm= uicontrol('Style','Text','String','L2  :','HorizontalAlignment','left','FontSize',obj.fontSize,...
                 'Units','normalized','pos',[0 0   stw th],'parent',obj.ph,'HandleVisibility','on');
             
@@ -142,6 +154,7 @@ classdef asStatisticsClass < handle
                     refImg = ud.cplxImg;
                     obj.isComplex = true;
                 end
+                obj.ah = axesH;                                
             end
 
             obj.imgDim = size(refImg);
@@ -215,6 +228,32 @@ classdef asStatisticsClass < handle
                 obj.getNorm];
         end
         
+        function bool = getMarkMinState(obj)
+            bool = get(obj.sthMin,'value');
+        end
+
+        function bool = getMarkMaxState(obj)
+            bool = get(obj.sthMax,'value');
+        end
+        
+        function setMarkMin(obj, state)                        
+            if state
+                obj.drawMinPoint();
+            else
+                delete(obj.minPointH);
+            end
+            set(obj.sthMin,'value', state);
+        end
+        
+        function setMarkMax(obj, state)
+            if state
+                obj.drawMaxPoint();
+            else
+                delete(obj.maxPointH);
+            end            
+            set(obj.sthMax,'value', state);
+        end
+        
         function min = getMin(obj)
             min = obj.imgMin;
         end
@@ -250,8 +289,28 @@ classdef asStatisticsClass < handle
                 maxTooltipStr = sprintf('%s @ %d / %d',maxStr,obj.imgMaxPos(1),obj.imgMaxPos(2));
                 obj.setMaxStr (maxStr,maxTooltipStr);
 
+                if get(obj.sthMin,'value')
+                    % draw minimum marker
+                    obj.drawMinPoint();
+                end
+                if get(obj.sthMax,'value')
+                    % draw maximum marker
+                    obj.drawMaxPoint();
+                end
+                
             end
         end
+        
+        function drawMinPoint(obj)
+            obj.minPointH = impoint(obj.ah,obj.imgMinPos(2),obj.imgMinPos(1));
+            obj.minPointH.setColor('green');
+        end
+
+        function drawMaxPoint(obj)
+            obj.maxPointH = impoint(obj.ah,obj.imgMaxPos(2),obj.imgMaxPos(1));
+            obj.maxPointH.setColor('red');
+        end
+        
         function setDimStr(obj, dim)
             if ~obj.enabled
                 obj.enableText();

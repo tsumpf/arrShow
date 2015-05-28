@@ -30,6 +30,7 @@ classdef arrShow < handle
         window          = [];               % image windowing object
         roi             = [];               % region of interest object
         imageText       = [];               % image text object
+        markers         = [];               % pixel markers
         
         UserData        = [];               % this is not used within this class
         % and may be set and
@@ -185,7 +186,9 @@ classdef arrShow < handle
             % evaluate varagin
             CW = [];
             userFigurePosition = [];
+            selectionOffset = [];
             selectedImageStr = '';
+            pixMarkers = [];
             imageTextVal = [];
             initComplexSelect = [];
             infoText = '';
@@ -238,7 +241,11 @@ classdef arrShow < handle
                             % drawing the actual ui elements. This is
                             % currently used to create temporary object 
                             % copies which are saveable in matlab >= 2014b
-                            renderUi = option_value;
+                            renderUi = option_value;                            
+                        case 'offset' % offset to the asSelection class
+                            selectionOffset = option_value;                            
+                        case 'markers' % pixel markers
+                            pixMarkers = option_value;
                             
                         otherwise
                             error('arrShow:varargin','unknown option [%s]!\n',option);
@@ -349,7 +356,7 @@ classdef arrShow < handle
             
             % info textbox object
             obj.infotext = asInfoTextClass(obj.cph, obj.INFOTEXT_POS);
-            
+                        
             % complex part selector (the dropdown menu on the top right of
             % the arrayShow window)
             obj.complexSelect = asCmplxChooserClass(...
@@ -404,6 +411,7 @@ classdef arrShow < handle
                 'apply2allCb',@obj.applyToRelatives,...
                 'InitStrings',initStrings,...
                 'dataObject',obj.data,...
+                'offsets', selectionOffset,...
                 'sendIcon',obj.icons.send);
             obj.data.linkToSelectionClassObject(obj.selection);
             
@@ -422,6 +430,11 @@ classdef arrShow < handle
             if ~isempty(selectedImageStr)
                 obj.selection.setValue(selectedImageStr,true,true,true);
             end
+            
+            
+            % pixel markers
+            obj.markers = asMarkerClass(obj.selection, pixMarkers, obj.mbh.markers);
+            
             
             % if specific figure position is given, resize the gui
             if ~isempty(userFigurePosition)
@@ -481,9 +494,10 @@ classdef arrShow < handle
                 end
             end
             
+            
             if ~renderUi
                 return;
-            end
+            end            
             
             % save figure position in the object property (pixel units) and activate
             % figure resize function
@@ -859,7 +873,7 @@ classdef arrShow < handle
                 end                
 
                 if exist(filenameOrVideoWriterObj,'file');
-                    fprintf('Fig. %d: overwriting existing file: %s\n',obj.fh, filenameOrVideoWriterObj);
+                    fprintf('Fig. %d: overwriting existing file: %s\n',obj.getFigureNumber, filenameOrVideoWriterObj);
                 end                
             end
             
@@ -938,7 +952,7 @@ classdef arrShow < handle
                     img = img / CW(2);
 
                     % scale image to the range of the current colormap
-                    cmap = get(obj.fh,'Colormap');
+                    cmap = obj.getColormap('current', true);
                     img = img * ( size(cmap,1) - 1) + 1;
 
                     % get rgb image
@@ -1089,7 +1103,7 @@ classdef arrShow < handle
                 
                 % check if file already exists
                 if exist(filename,'file');
-                    fprintf('Fig. %d: overwriting existing file: %s\n',obj.fh, filename);
+                    fprintf('Fig. %d: overwriting existing file: %s\n',obj.getFigureNumber(), filename);
                 end
                 
                 % get colorbar handle
@@ -1851,8 +1865,12 @@ classdef arrShow < handle
         end
         
         function minimizeFigure(obj)
-            figureName = ['Figure ',num2str(obj.fh)];
-            showwindow(figureName,'minimize');
+            figureName = ['Figure ',num2str(obj.getFigureNumber())];
+            if verLessThan('matlab','8.4.0')
+                showwindow(figureName,'minimize');
+            else
+                warning('Sorry, showwindow does not seem to be working with this Matlab version. This needs to be fixed some day...');
+            end
         end
         % ---->  figure properties
         
@@ -2360,12 +2378,15 @@ classdef arrShow < handle
         end
 
         function setUserCallback(obj, ucb_function)
-		obj.userCallback = ucb_function;
-	end
+			obj.userCallback = ucb_function;
+		end
         
         function setUserCb(obj, cb_function)
             obj.userCallback = cb_function;
-        end
+		end
+		function cb = getUserCallback(obj)
+			cb = obj.userCallback;
+		end
        
         
     end %(public methods)
@@ -2654,18 +2675,22 @@ classdef arrShow < handle
             
             
             
-            % view
-            mb_view = uimenu(obj.fh,'Label','View');
+            % view --
+            mb_view = uimenu(obj.fh,'Label','View');            
+            
+            % markers
+            obj.mbh.markers = uimenu(mb_view,'Label','Markers' );                        
+            
+            % aspect ratio etc...
             obj.mbh.aspectRatio = uimenu(mb_view,'Label','Keep aspect ratio' ,...
                 'callback',@(src,evnt)obj.toggleAspectRatio(),...
-                'Checked','on');
+                'Checked','on','Separator','on');
             obj.mbh.trueSize = uimenu(mb_view,'Label','Keep true size' ,...
                 'callback',@(src,evnt)obj.toggleTrueSize(),...
                 'Checked','off');
             obj.mbh.quiver = uimenu(mb_view,'Label','Show vector plot' ,...
                 'callback',@(src,evnt)obj.toggleUseQuiver(),...
-                'Checked','off');
-            
+                'Checked','off');            
             
             % zoom
             cmh_zoom = uimenu(mb_view,'Label','Set zoom' ,...
@@ -3053,6 +3078,7 @@ classdef arrShow < handle
             uimenu(menuHandle,'Label','martin_phase' ,'callback',@(src,evnt)cb('martin_phase(256)'));
             uimenu(menuHandle,'Label','Red/Green periodic','callback',@(src,evnt)cb('redgreen_periodic'));
             uimenu(menuHandle,'Label','Jet (j)'      ,'callback',@(src,evnt)cb('jet(256)'));
+            uimenu(menuHandle,'Label','YlGnBu_r (y)'     ,'callback',@(src,evnt)cb('YlGnBu_r'));
             if ~verLessThan('matlab','8.4.0')
                 uimenu(menuHandle,'Label','Parula'      ,'callback',@(src,evnt)cb('parula(256)'));
             end
@@ -3416,6 +3442,9 @@ classdef arrShow < handle
                 end
             end
             
+            % update pixel markers
+            obj.markers.updateAxesHandles(allAxes);
+            
             % insert colorbar (if the respective button is enabled)
             if strcmp( get(obj.tbh.colorbar,'State'), 'on')
                 colorbar('peer',obj.getCurrentAxesHandle);
@@ -3583,6 +3612,8 @@ classdef arrShow < handle
                         obj.setColormap('Gray(256)');
                     case 'h'
                         obj.setColormap('hot(256)');
+                    case 'y'
+                        obj.setColormap('ylgnbu_r');
                         
                         % windowing
                     case 'cc'
@@ -4186,18 +4217,21 @@ classdef arrShow < handle
             everythingSeemsFine = ...
                 exist('drawPhaseCircle','file') &&...
                 exist('asCloseAll','file') &&...
+                exist('gray_periodic','file') &&...
                 exist('complex2rgb','file');
             
             if ~everythingSeemsFine
                 % try adding the paths
-                fprintf(['Path to the arraySow support functions does ',...
-                    'not seem to be registered.\nTrying to add it ',...
-                    'automatically...\n']);
+                fprintf(['Not all paths to the arraySow support functions ',...
+                    'seem to be registered.\nTrying to add it ',...
+                    'automatically...\nTo avoid this message in future Matlab sessions ',...
+                    'call savepath or run the README.m again.\n']);
                 basePath = fileparts(mfilename('fullpath'));
                 addpath(basePath);
                 addpath([basePath,filesep,'supportFunctions']);
                 addpath([basePath,filesep,'scripts']);
                 addpath([basePath,filesep,'cursorPosFcn']);
+                addpath([basePath,filesep,'customColormaps']);
             end
             
         end

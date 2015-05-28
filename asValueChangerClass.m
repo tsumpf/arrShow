@@ -53,6 +53,8 @@ classdef asValueChangerClass < handle
         min     = 1;     % string minimum
         max     = 99;    % standard maximum;
         
+        inc = 1; % standard increment for the + and - buttons
+        
         offset  = 0;     % constant offset which is added to the selected
         % number (this can be useful when sending an image
         % selection number to other windows with the
@@ -211,71 +213,76 @@ classdef asValueChangerClass < handle
                 obj.plotTagCmh = uimenu(obj.cmh,'Label','Set as plot dim'   ,...
                     'callback',@(src,evnt)obj.plotDimCallback(obj.id),...
                     'Position',1);
-                uimenu(obj.cmh,'Label','Set offset'   ,...
-                    'callback',@(src,evnt)obj.setOffset(),...
-                    'Position',2);                
                 obj.lockCmh = uimenu(obj.cmh,'Label','Lock'   ,...
                     'callback',@(src,evnt)lockCb(obj),...
-                    'Position',3);
+                    'Position',2);
+
+                uimenu(obj.cmh,'Label','Set offset'   ,...
+                    'callback',@(src,evnt)obj.setOffset(),...
+                    'Position',3, 'Separator','on');                
+                uimenu(obj.cmh,'Label','Set increment'   ,...
+                    'callback',@(src,evnt)obj.setIncrement(),...
+                    'Position',4);                
+
                 
                 % navigation
                 uimenu(obj.cmh,'Label','Set to ''1'' (page up)'   ,...
                     'callback',@(src,evnt)obj.setStr('1',true),...
-                    'Position',4,...
+                    'Position',5,...
                     'Separator','on');
                 uimenu(obj.cmh,'Label','Set to ''end'' (page down)'   ,...
                     'callback',@(src,evnt)obj.setStr('end',true),...
-                    'Position',5);
+                    'Position',6);
                 
                 
                 obj.flipCmh = uimenu(obj.cmh,'Label','Flip subscripts'   ,...
                     'callback',@(src,evnt)obj.flipsubs(),...
-                    'Position',6);
+                    'Position',7);
                 
                 % destructive operations
                 uimenu(obj.cmh,'Label',['Flip dimension ', num2str(obj.id),' (destructive)'] ,...
                     'callback',@(src,evnt)obj.data.flipDim(obj.id),...
-                    'Position',7);
+                    'Position',8);
                 uimenu(obj.cmh,'Label',['Crop dim ', num2str(obj.id),' (destructive)'] ,...
                     'callback',@(src,evnt)obj.data.cropDim(obj.id),...
-                    'Position',8);
+                    'Position',9);
                 
                 % fft / ifft / fftshift
                 uimenu(obj.cmh,'Label',['FFT dim ', num2str(obj.id),' (destructive)'] ,...
                     'callback',@(src,evnt)obj.data.fftDim(obj.id),...
-                    'Position',9,'Separator','on');
+                    'Position',10,'Separator','on');
                 uimenu(obj.cmh,'Label',['iFFT dim ', num2str(obj.id),' (destructive)'] ,...
                     'callback',@(src,evnt)obj.data.ifftDim(obj.id),...
-                    'Position',10);
+                    'Position',11);
                 uimenu(obj.cmh,'Label',['FFTshift dim ', num2str(obj.id),' (destructive)'] ,...
                     'callback',@(src,evnt)obj.data.fftshift(obj.id),...
-                    'Position',11);
+                    'Position',12);
                 
                 % min, max etc...
                 uimenu(obj.cmh,'Label',['Max dim ', num2str(obj.id),' (destructive)'] ,...
                     'callback',@(src,evnt)obj.data.max(obj.id),...
-                    'Position',12,'Separator','on');
+                    'Position',13,'Separator','on');
                 uimenu(obj.cmh,'Label',['Min dim ', num2str(obj.id),' (destructive)'] ,...
                     'callback',@(src,evnt)obj.data.min(obj.id),...
-                    'Position',13);
+                    'Position',14);
                 uimenu(obj.cmh,'Label',['Sum dim ', num2str(obj.id),' (destructive)'] ,...
                     'callback',@(src,evnt)obj.data.sum(obj.id),...
-                    'Position',14);
+                    'Position',15);
                 uimenu(obj.cmh,'Label',['Mean dim ', num2str(obj.id),' (destructive)'] ,...
                     'callback',@(src,evnt)obj.data.mean(obj.id),...
-                    'Position',15);
+                    'Position',16);
                 uimenu(obj.cmh,'Label',['Product dim ', num2str(obj.id),' (destructive)'] ,...
                     'callback',@(src,evnt)obj.data.mean(obj.id),...
-                    'Position',16);
+                    'Position',17);
                 
                 
                 % common MRI coil combination methods
                 uimenu(obj.cmh,'Label',['Root sum squares dim ', num2str(obj.id),' (destructive)'] ,...
                     'callback',@(src,evnt)obj.data.sumSqr(obj.id),...
-                    'Position',17,'Separator','on');
+                    'Position',18,'Separator','on');
                 uimenu(obj.cmh,'Label',['Coil combine dim ', num2str(obj.id),' (SLOW!,destructive)'] ,...
                     'callback',@(src,evnt)obj.data.coilCombine(obj.id),...
-                    'Position',18);
+                    'Position',19);
                 
                 
                 set(obj.pbh_up,'uicontextmenu',obj.cmh);
@@ -314,10 +321,52 @@ classdef asValueChangerClass < handle
             
         end
         
+        function setIncrement(obj, inc)
+            % set the standard increment for the up and down functions
+            % (and the + and - buttons)
+
+            % if no increment is give, open input dialog
+            if nargin < 2
+                inc = mydlg('Enter increment','Increment input dlg',obj.inc);
+                if isempty(inc) 
+                    return; 
+                end
+                inc = str2double(inc);
+            end
+            
+            if ~isscalar(inc)
+                fprintf('Increment has to be a scalar value\n');
+                return;
+            end
+            
+            if inc == 0                
+                inc = 1;
+                %...since 0 doesn't make much sense                
+            end
+            
+            obj.inc = inc;
+            
+            if inc == 1
+                incStr = '';
+            else                
+                incStr = num2str(inc);
+            end
+            set(obj.pbh_up,'String',['+',incStr]);
+            set(obj.pbh_down,'String',['-',incStr]);                            
+        end
+        
+        function inc = getIncrement(obj)
+            inc = obj.inc;
+        end
+        
         function up(obj)
             if obj.enabled
                 num = obj.str2validNum(get(obj.eth,'String'));
-                obj.setStrForce(num2str(obj.str2validNum(num + 1)));
+                newNum = num + obj.inc;
+                if newNum > obj.max || newNum < obj.min
+                    return;
+                end
+                obj.setStrForce(num2str(newNum));                
                 obj.runUserCb;
             end
         end
@@ -325,7 +374,11 @@ classdef asValueChangerClass < handle
         function down(obj)
             if obj.enabled
                 num = obj.str2validNum(get(obj.eth,'String'));
-                obj.setStrForce(num2str(obj.str2validNum(num - 1)));
+                newNum = num - obj.inc;
+                if newNum > obj.max || newNum < obj.min
+                    return;
+                end                
+                obj.setStrForce(num2str(newNum));
                 obj.runUserCb;
             end
         end
@@ -351,12 +404,14 @@ classdef asValueChangerClass < handle
                     obj.colonDimTag = tag;
                     switch tag
                         case 1
-                            set(obj.pbh_dim,'ForegroundColor',obj.tag1Color);
-                            obj.colonDim1Callback(obj.id);
+                            obj.setOffset(0, false);  % deactivate possible previous offsets                           
+                            set(obj.pbh_dim,'ForegroundColor',obj.tag1Color); % set the text color
+                            obj.colonDim1Callback(obj.id);  % tell the asSelection class about the change, so that it can deactivate the previous colon dim. 
                             obj.setStrForce(obj.colonStr);
                         case 2
-                            set(obj.pbh_dim,'ForegroundColor',obj.tag2Color);
-                            obj.colonDim2Callback(obj.id);
+                            obj.setOffset(0, false);  % deactivate possible previous offsets                           
+                            set(obj.pbh_dim,'ForegroundColor',obj.tag2Color); % set the text color
+                            obj.colonDim2Callback(obj.id); % tell the asSelection class about the change, so that it can deactivate the previous colon dim. 
                             obj.setStrForce(obj.colonStr);
                         case 0
                             set(obj.pbh_dim,'ForegroundColor',obj.tag0Color);
@@ -424,7 +479,14 @@ classdef asValueChangerClass < handle
             % (this can be useful when sending an image
             % selection number to other windows with the
             % different numbers of resolution or FOV)
-
+            
+            % run "userCb (meaning updateFig) by default (I should change
+            % the naming some day. The term "userCb" was choosen before
+            % everything became arrayShow specific anyway)
+            if nargin < 3 || isempty(runUserCb)
+                runUserCb = true;
+            end
+            
             % if no offset is give, open input dialog
             if nargin < 2
                 offs = mydlg('Enter offset','Offset input dlg',obj.offset);
@@ -433,21 +495,32 @@ classdef asValueChangerClass < handle
                 end
                 offs = str2double(offs);
             end                
-            
+           
             % if the offset is 0, set background color of the edit text field to default
             if isempty(offs) || offs == 0
-                set(obj.eth,'BackgroundColor',get(0,'defaultuicontrolbackgroundcolor'));
+                set(obj.eth,'BackgroundColor',get(0,'defaultuicontrolbackgroundcolor'));                
             else
                 % else, change the color
                 set(obj.eth,'backgroundcolor',obj.offsetColor);                
             end
             
-            % get the current selection string
-            origSelStr = obj.getStr(true);
-
             % adapt the value changer limits
             obj.min = 1 - offs;
-            obj.max = str2double(get(obj.pbh_dim,'String')) - offs;            
+            obj.max = str2double(get(obj.pbh_dim,'String')) - offs;                        
+            
+            % if the dimension is a colon dim and the offset is 0...
+            if obj.getColonDimTag > 0 && offs == 0
+                % store the new offset in the object properties and just
+                % return
+                obj.offset = offs;                
+                return;
+            end
+            
+            % ...otherwise adapt the selected value to match the same frame
+            % considering the offset (if the dim is a colon dim, we just select the first frame)...
+            
+            % get the current selection string considering the old offset
+            origSelStr = obj.getStr(true);                
             
             % add the offset to the value in the string (to keep the
             % actually selected frame constant)
@@ -460,10 +533,13 @@ classdef asValueChangerClass < handle
                 newSel = origSel - offs;
             end
             
-            obj.offset = offs;
-            if nargin < 3 || runUserCb == true
-                obj.setStr(newSel);
-            end
+            % store the new offset in the object properties
+            % (this has to be done AFTER the obj.getStr command above,
+            % since getStr already consideres the obj.offset property)
+            obj.offset = offs;                
+           
+            % set the new value to the edit text field
+            obj.setStr(newSel, runUserCb);            
         end
         
         function offs = getOffset(obj)
