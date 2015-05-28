@@ -873,7 +873,7 @@ classdef arrShow < handle
                 end                
 
                 if exist(filenameOrVideoWriterObj,'file');
-                    fprintf('Fig. %d: overwriting existing file: %s\n',obj.fh, filenameOrVideoWriterObj);
+                    fprintf('Fig. %d: overwriting existing file: %s\n',obj.getFigureNumber, filenameOrVideoWriterObj);
                 end                
             end
             
@@ -952,7 +952,7 @@ classdef arrShow < handle
                     img = img / CW(2);
 
                     % scale image to the range of the current colormap
-                    cmap = get(obj.fh,'Colormap');
+                    cmap = obj.getColormap('current', true);
                     img = img * ( size(cmap,1) - 1) + 1;
 
                     % get rgb image
@@ -1103,7 +1103,7 @@ classdef arrShow < handle
                 
                 % check if file already exists
                 if exist(filename,'file');
-                    fprintf('Fig. %d: overwriting existing file: %s\n',obj.fh, filename);
+                    fprintf('Fig. %d: overwriting existing file: %s\n',obj.getFigureNumber(), filename);
                 end
                 
                 % get colorbar handle
@@ -1865,8 +1865,12 @@ classdef arrShow < handle
         end
         
         function minimizeFigure(obj)
-            figureName = ['Figure ',num2str(obj.fh)];
-            showwindow(figureName,'minimize');
+            figureName = ['Figure ',num2str(obj.getFigureNumber())];
+            if verLessThan('matlab','8.4.0')
+                showwindow(figureName,'minimize');
+            else
+                warning('Sorry, showwindow does not seem to be working with this Matlab version. This needs to be fixed some day...');
+            end
         end
         % ---->  figure properties
         
@@ -2374,12 +2378,15 @@ classdef arrShow < handle
         end
 
         function setUserCallback(obj, ucb_function)
-		obj.userCallback = ucb_function;
-	end
+			obj.userCallback = ucb_function;
+		end
         
         function setUserCb(obj, cb_function)
             obj.userCallback = cb_function;
-        end
+		end
+		function cb = getUserCallback(obj)
+			cb = obj.userCallback;
+		end
        
         
     end %(public methods)
@@ -3071,6 +3078,7 @@ classdef arrShow < handle
             uimenu(menuHandle,'Label','martin_phase' ,'callback',@(src,evnt)cb('martin_phase(256)'));
             uimenu(menuHandle,'Label','Red/Green periodic','callback',@(src,evnt)cb('redgreen_periodic'));
             uimenu(menuHandle,'Label','Jet (j)'      ,'callback',@(src,evnt)cb('jet(256)'));
+            uimenu(menuHandle,'Label','YlGnBu_r (y)'     ,'callback',@(src,evnt)cb('YlGnBu_r'));
             if ~verLessThan('matlab','8.4.0')
                 uimenu(menuHandle,'Label','Parula'      ,'callback',@(src,evnt)cb('parula(256)'));
             end
@@ -3604,6 +3612,8 @@ classdef arrShow < handle
                         obj.setColormap('Gray(256)');
                     case 'h'
                         obj.setColormap('hot(256)');
+                    case 'y'
+                        obj.setColormap('ylgnbu_r');
                         
                         % windowing
                     case 'cc'
@@ -4207,18 +4217,21 @@ classdef arrShow < handle
             everythingSeemsFine = ...
                 exist('drawPhaseCircle','file') &&...
                 exist('asCloseAll','file') &&...
+                exist('gray_periodic','file') &&...
                 exist('complex2rgb','file');
             
             if ~everythingSeemsFine
                 % try adding the paths
-                fprintf(['Path to the arraySow support functions does ',...
-                    'not seem to be registered.\nTrying to add it ',...
-                    'automatically...\n']);
+                fprintf(['Not all paths to the arraySow support functions ',...
+                    'seem to be registered.\nTrying to add it ',...
+                    'automatically...\nTo avoid this message in future Matlab sessions ',...
+                    'call savepath or run the README.m again.\n']);
                 basePath = fileparts(mfilename('fullpath'));
                 addpath(basePath);
                 addpath([basePath,filesep,'supportFunctions']);
                 addpath([basePath,filesep,'scripts']);
                 addpath([basePath,filesep,'cursorPosFcn']);
+                addpath([basePath,filesep,'customColormaps']);
             end
             
         end
