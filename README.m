@@ -7,14 +7,23 @@
 %                 http://www.boost.org/LICENSE_1_0.txt)
 
 %% before the first run, we need to register some paths for arrayShow
-% (this needs to be done only once)
+% (this needs to be done only once and needs to be executed from within this files folder)
 disp('Adding arrShow folders to path');
 basePath = pwd;
 addpath(basePath);
 addpath([basePath,filesep,'supportFunctions']);
 addpath([basePath,filesep,'scripts']);
 addpath([basePath,filesep,'cursorPosFcn']);
+addpath([basePath,filesep,'customColormaps']);
+
+% cd to the directory of the pathdef.m
+cd(fileparts(which('pathdef.m')));
+
+% save path
 savepath();
+
+% cd back
+cd(basePath);
 
 %% Example: %%%%%%%%%%%%%%%%%%%%%
 
