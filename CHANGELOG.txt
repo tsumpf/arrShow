@@ -1,5 +1,5 @@
 v 0.3.4
-- added a asMarker class to highlight image regions
+- added an asMarker class to highlight image regions
 - added buttons to the asStatistics class to mark the max and min pixels
 - added option to change the increment of the valueChanger
 - new YlGnBu colormap from the matplotlib, added by Christian Holme
