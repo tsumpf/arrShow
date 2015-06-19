@@ -40,6 +40,10 @@ classdef asMarkerClass < handle
             obj.uiMenuHandle.showMarker = uimenu(uiMenuBase,'Label','Show' ,...
                 'callback',@(src,evnt)obj.toggleVisibility(),...
                 'checked','on');
+            uimenu(uiMenuBase,'Label','Add global' ,...
+                'callback',@(src,evnt)obj.add(),'separator','on');            
+            uimenu(uiMenuBase,'Label','Add to current frames' ,...
+                'callback',@(src,evnt)obj.addToCurrentFrames());                        
             uimenu(uiMenuBase,'Label','Clear' ,...
                 'callback',@(src,evnt)obj.clear(),'separator','on');
             
@@ -65,6 +69,14 @@ classdef asMarkerClass < handle
             % equal for the 4th dimension and different for the 3rd
             % dimension.
             
+            % if no position vector is given, open input dialog            
+            if nargin < 2 || isempty(pos)
+                pos = asMarkerClass.getPosFromUi();
+                if isempty(pos)
+                    return;
+                end
+            end
+                
             pos = obj.parsePos(pos);
             
             if iscell(obj.pos)
@@ -123,6 +135,14 @@ classdef asMarkerClass < handle
         
         function addToCurrentFrames(obj, newPos)
             
+            % if no position vector is given, open input dialog
+            if nargin < 2 || isempty(newPos)
+                newPos = asMarkerClass.getPosFromUi();
+                if isempty(newPos)
+                    return;
+                end
+            end
+
             % assure that obj.pos is initialized as a cell array
             if ~iscell(obj.pos) || isempty(obj.pos)
                 obj.initPosCellArray();           
@@ -429,4 +449,21 @@ classdef asMarkerClass < handle
         end
     end
     
+    methods(Static)
+        function pos = getPosFromUi()
+            initVal = '0,0';
+            pos = mydlg('Enter selection string','Selection input dlg',initVal);
+            if isempty(pos)
+                return;
+            end
+            
+            try
+                pos = str2num(pos);                 %#ok<ST2NM>
+            catch 
+                pos = [];
+                fprintf('Invalid position vector\n');
+            end
+        end
+                    
+    end
 end
