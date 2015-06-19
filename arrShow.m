@@ -156,6 +156,10 @@ classdef arrShow < handle
         FP_MAX_HEIGHT = 18;   % desired height for the figurePanel (in centimeters)
         % (for small screens, the actual fp_height
         % might be smaller)
+        
+        % marker colors
+        MARKER_COL_PHA = 'white';  % default marker color for phase representations
+        MARKER_COL_REAL= 'yellow'; % default marker color for real valued images
     end
     
     properties (Access = private);
@@ -2463,6 +2467,11 @@ classdef arrShow < handle
                     end
                 else
                     imgInds = find(arrayfun(@(x)isa(x,'matlab.graphics.primitive.Image'),axesChilds));
+                    if isempty(imgInds)
+                        % also try to find a quiver object, in case
+                        % vectorPlot is enabled...
+                        imgInds = find(arrayfun(@(x)isa(x,'matlab.graphics.chart.primitive.Quiver'),axesChilds));
+                    end
                     imageHandle = axesChilds(imgInds(1));                 
                     bool = true;
                 end                                
@@ -3444,6 +3453,12 @@ classdef arrShow < handle
             
             % update pixel markers
             obj.markers.updateAxesHandles(allAxes);
+            complxSel = obj.complexSelect.getSelection();
+            if strcmp(complxSel,'Com') || strcmp(complxSel,'Pha')
+                obj.markers.setColor(obj.MARKER_COL_PHA);
+            else
+                obj.markers.setColor(obj.MARKER_COL_REAL);
+            end
             
             % insert colorbar (if the respective button is enabled)
             if strcmp( get(obj.tbh.colorbar,'State'), 'on')

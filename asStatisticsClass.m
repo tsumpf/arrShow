@@ -137,7 +137,8 @@ classdef asStatisticsClass < handle
             if ishandle(refImg)
                 axesH = get(refImg,'Parent');   
             
-                if strcmp(get(refImg,'Type'),'hggroup')
+                if strcmp(get(refImg,'Type'),'hggroup') ||...
+                    strcmp(get(refImg,'Type'),'quiver')
                     % assume that quiver has been used to illustrate the
                     % data. Therefore the image should be stored in the
                     % axes userData
