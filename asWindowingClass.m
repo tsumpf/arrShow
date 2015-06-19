@@ -650,11 +650,18 @@ classdef asWindowingClass < handle
                 % derive axes limits
                 CLim(1)  = center - width/2;
                 CLim(2)  = CLim(1) + width;
-                
+                                
                 if obj.isComplex
                     rgbImg = complex2rgb(obj.complexRef,256,CLim, obj.getPhaseColormapCb());
                     set(obj.ih,'CData',rgbImg);
                 else
+                    % last check, if the width is too small to neglect rounding
+                    % errors
+                    if CLim(1) - CLim(2) == 0
+                        obj.enable(false);
+                        return;
+                    end
+                    
                     % set limits to axes
                     set(obj.ah,'CLim',CLim);
                 end

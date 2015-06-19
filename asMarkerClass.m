@@ -220,6 +220,11 @@ classdef asMarkerClass < handle
             
             % parse and store positions in the object properties
             obj.pos = obj.parsePos(pos);
+            
+            % delete previous markers
+            obj.deleteMarkers();
+            
+            % draw new markers
             obj.draw();
         end
         
@@ -263,8 +268,39 @@ classdef asMarkerClass < handle
                 end
             end
         end
-    end
     
+        function setColor(obj, col)
+            if nargin < 2 || isempty(col)
+                % if no color is given, use the color from the object
+                % properties
+                col = obj.color;
+            elseif strcmp(col,obj.color)
+                % if the given color already equals the color in the
+                % object properties, we probably don't need update anything
+                % and we can just return
+                return;
+            end
+                                
+            try
+                % instead of parsing the col input variable for validity,
+                % just use a try/catch on the marker's setColor method...
+                % FIXME: this 'pseudo parsing' won't work if setColor is
+                % called before any actual markers are present :-/
+                for i = 1 : length(obj.markerHandles)
+                    cellfun(@(h)setColor(h,col),obj.markerHandles{i});
+                end
+                obj.color = col;                
+            catch ME
+                if strcmp(ME.identifier, 'MATLAB:datatypes:RGBAColor:ParseError')
+                    fprintf('Invalid color: %s\n',col);
+                else
+                    rethrow(ME);
+                end
+            end            
+        end
+        
+    
+    end        
     %     methods (Access = protected)
     %     end
     methods (Access = private)
@@ -296,13 +332,14 @@ classdef asMarkerClass < handle
             end
         end
         
-        function markerHandles = drawAtAxes(~, ah, pos)
+        function markerHandles = drawAtAxes(obj, ah, pos)
             nMarkersPerAxes = size(pos,2);
             markerHandles = cell(nMarkersPerAxes,1);
             for i = 1 : nMarkersPerAxes
                 P = pos(:,i);
                 %                 markerHandles{i} = impoint(ah,P(2),P(1),'color',obj.color);
                 markerHandles{i} = impoint(ah,P(2),P(1));
+                markerHandles{i}.setColor(obj.color);
             end
         end
         
