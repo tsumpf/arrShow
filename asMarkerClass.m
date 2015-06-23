@@ -20,30 +20,52 @@ classdef asMarkerClass < handle
         ignoredDimensions = []; % dimensions where the position cell vector is 1
         markerHandles = {};     % (its probably actually marker "objects" since matlab 2014b)
         selection = [];         % the asSelectionCass (used to determine selected frames)
-        color = 'yellow';       % ...not used yet
+        color = 'yellow';       % default color
+        style = 1;              % 1 = impoint, 2 = rectange
         
-        uiMenuHandle = []; % context menu handle
+        uiMenuHandle = []; % context menu handle from the main arrShow window
+        apply2allCb  = []; % send to all relatives callback
     end
     
     methods (Access = public)
         
-        function obj = asMarkerClass(selection, markerPositions, uiMenuBase)
+        function obj = asMarkerClass(selection, markerPositions, uiMenuBase, apply2allCb)
             % constructor
             
             obj.selection = selection;
             if nargin > 1 && ~isempty(markerPositions)
                 obj.pos = obj.parsePos(markerPositions);
             end
+            obj.apply2allCb = apply2allCb;
             
             % populate ui menu
             obj.uiMenuHandle.base = uiMenuBase;
+            
+            % Show / hide
             obj.uiMenuHandle.showMarker = uimenu(uiMenuBase,'Label','Show' ,...
                 'callback',@(src,evnt)obj.toggleVisibility(),...
                 'checked','on');
+            
+            % Style
+            obj.uiMenuHandle.style = uimenu(uiMenuBase,'Label','Style');
+            uimenu(obj.uiMenuHandle.style,'Label','Impoint' ,...
+                'callback',@(src,evnt)obj.setStyle(1));                        
+            uimenu(obj.uiMenuHandle.style,'Label','Rectangle' ,...
+                'callback',@(src,evnt)obj.setStyle(2));                        
+            
+            % add...
             uimenu(uiMenuBase,'Label','Add global' ,...
                 'callback',@(src,evnt)obj.add(),'separator','on');            
             uimenu(uiMenuBase,'Label','Add to current frames' ,...
                 'callback',@(src,evnt)obj.addToCurrentFrames());                        
+            
+            % send...
+            uimenu(uiMenuBase,'Label','Send all' ,...
+                'callback',@(src,evnt)obj.send('all'),'separator','on');                        
+            uimenu(uiMenuBase,'Label','Send current' ,...
+                'callback',@(src,evnt)obj.send('current'));                        
+            
+            % clear
             uimenu(uiMenuBase,'Label','Clear' ,...
                 'callback',@(src,evnt)obj.clear(),'separator','on');
             
@@ -170,8 +192,7 @@ classdef asMarkerClass < handle
                 for i = 1 : length(currPos)
                     currPos{i} = [currPos{i}, newPos];
                 end
-            end
-            
+            end            
             
             % set the new positions
             obj.setInCurrentFrames(currPos, false);
@@ -208,8 +229,7 @@ classdef asMarkerClass < handle
             obj.pos = subsasgn(obj.pos,S,newPos);
             
             % "re-draw"
-            obj.deleteMarkers()
-            obj.draw();
+            obj.redraw();
             
         end
         
@@ -229,7 +249,7 @@ classdef asMarkerClass < handle
             end
         end
         
-        function markerHandle = getMarkerHandles(obj)
+        function markerHandle = getHandles(obj)
             markerHandle = obj.markerHandles;
         end
         
@@ -241,11 +261,8 @@ classdef asMarkerClass < handle
             % parse and store positions in the object properties
             obj.pos = obj.parsePos(pos);
             
-            % delete previous markers
-            obj.deleteMarkers();
-            
-            % draw new markers
-            obj.draw();
+            % redraw markers
+            obj.redraw();
         end
         
         function clear(obj)
@@ -289,37 +306,62 @@ classdef asMarkerClass < handle
             end
         end
     
+        function setStyle(obj, style)
+            % style can currently be either impoint or rectangle
+            
+            if isempty(style)
+                return;
+            end
+            
+            switch style
+                case {1, 'impoint', 'point'}
+                    obj.style = 1;
+                case {2, 'rect', 'rectangle'}
+                    obj.style = 2;
+                otherwise
+                    error('asMarkerClass:setStyle','Unsupported marker style');
+            end
+            obj.redraw();                
+        end
+        
+        function style = getStyle(obj, returnAsNumber)
+            if nargin < 2
+                returnAsNumber = false;
+            end
+            if returnAsNumber
+                style = obj.style;
+            else
+                switch(obj.style)
+                    case 1
+                        style = 'impoint';
+                    case 2
+                        style = 'rectangle';
+                end
+            end
+        end        
+        
         function setColor(obj, col)
-            if nargin < 2 || isempty(col)
-                % if no color is given, use the color from the object
-                % properties
-                col = obj.color;
-            elseif strcmp(col,obj.color)
+            if nargin < 2 || isempty(col) || strcmp(col,obj.color)
                 % if the given color already equals the color in the
                 % object properties, we probably don't need update anything
                 % and we can just return
                 return;
             end
-                                
-            try
-                % instead of parsing the col input variable for validity,
-                % just use a try/catch on the marker's setColor method...
-                % FIXME: this 'pseudo parsing' won't work if setColor is
-                % called before any actual markers are present :-/
-                for i = 1 : length(obj.markerHandles)
-                    cellfun(@(h)setColor(h,col),obj.markerHandles{i});
-                end
-                obj.color = col;                
-            catch ME
-                if strcmp(ME.identifier, 'MATLAB:datatypes:RGBAColor:ParseError')
-                    fprintf('Invalid color: %s\n',col);
-                else
-                    rethrow(ME);
-                end
-            end            
+            obj.color = col;
+            obj.redraw();                              
         end
         
-    
+        function send(obj, allOrCurrent)
+            if nargin < 2 || isempty(allOrCurrent)
+                allOrCurrent = 'all';
+            end
+            switch allOrCurrent
+                case 'all'
+                    obj.apply2allCb('markers.add',false,obj.get());
+                case 'current'
+                    obj.apply2allCb('markers.addToCurrentFrames',false,obj.getInCurrentFrames());
+            end
+        end
     end        
     %     methods (Access = protected)
     %     end
@@ -357,9 +399,19 @@ classdef asMarkerClass < handle
             markerHandles = cell(nMarkersPerAxes,1);
             for i = 1 : nMarkersPerAxes
                 P = pos(:,i);
-                %                 markerHandles{i} = impoint(ah,P(2),P(1),'color',obj.color);
-                markerHandles{i} = impoint(ah,P(2),P(1));
-                markerHandles{i}.setColor(obj.color);
+                switch obj.style
+                    case 1
+                        % impoint
+                        markerHandles{i} = impoint(ah,P(2),P(1));
+                        markerHandles{i}.setColor(obj.color);
+                    case 2
+                        % rectangle
+                        markerHandles{i} = rectangle('Parent',ah,'Position',[P(2), P(1), 1,1],'Curvature',[0,0],...
+                        'HitTest','off','EdgeColor',obj.color);
+
+                    otherwise
+                        error('asMarkerClass:drawAtAxes','Unsupported marker style');
+                end
             end
         end
         
@@ -368,6 +420,11 @@ classdef asMarkerClass < handle
                 cellfun(@delete,obj.markerHandles{i});
             end
             obj.markerHandles = {};
+        end
+        
+        function redraw(obj)
+            obj.deleteMarkers()
+            obj.draw();            
         end
         
         function pos = parsePos(obj, pos, expectedNumel)
@@ -385,7 +442,7 @@ classdef asMarkerClass < handle
             if iscell(pos)
                 if nargin > 2 && ~isempty(expectedNumel)
                     if numel(pos) ~= expectedNumel
-                        error('Number of elements in the new position vector are not valid');
+                        error('asMarkerClass:invalidDimensions','Number of elements in the new position vector are not valid');
                     end
                 else
                 
@@ -403,7 +460,7 @@ classdef asMarkerClass < handle
                         if isvector(pos)
                             matchingDims = find(dataDims == numel(pos));
                             if isempty(matchingDims)
-                                error('Marker position vector has invalid dimensions');
+                                error('asMarkerClass:invalidDimensions','Marker position vector has invalid dimensions');
                             end
                             
                             % define a new position matrix size with the
@@ -425,13 +482,17 @@ classdef asMarkerClass < handle
                     obj.ignoredDimensions = find(siPos == 1);
 
                     % check for unequal dimensions
-                    unequalDims = find(siPos ~= dataDims);
+                    if length(siPos) == length(dataDims)
+                        unequalDims = find(siPos ~= dataDims);
+                    else
+                        error('asMarkerClass:invalidDimensions','Marker position vector has invalid dimensions');
+                    end
 
                     % check, if the cell entries in the unequal dimensions
                     % are 1
                     if length(unequalDims) > length(obj.ignoredDimensions)||...
                         any(unequalDims ~= obj.ignoredDimensions)
-                        error('Marker position vector has invalid dimensions');                        
+                        error('asMarkerClass:invalidDimensions','Marker position vector has invalid dimensions');                        
                     end
                 end
                 

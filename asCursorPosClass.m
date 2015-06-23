@@ -710,14 +710,28 @@ classdef asCursorPosClass < handle
                 'callback',@(src,evnt)obj.togglePlotRowAndCol);
             
             uimenu(obj.fcmh.base,'Label','Plot along plotDim (v)' ,...
-                'callback',@(src,evnt)obj.plotAlongPlotDim,...
-                'Separator','on');
+                'callback',@(src,evnt)obj.plotAlongPlotDim);
             
             obj.fcmh.plotAlongDim = uimenu(obj.fcmh.base,'Label','Plot along plotDim continuously (Shift + v)' ,...
                 'callback',@(src,evnt)obj.togglePlotAlongDim);
             
+            % marker
+            obj.fcmh.marker = uimenu(obj.fcmh.base,'Label','Marker',...
+                'Separator','on');
+            uimenu(obj.fcmh.marker,'Label','Add to all frames' ,...
+                'callback',@(src,evnt)obj.asObj.markers.add(obj.getPosition));
+            uimenu(obj.fcmh.marker,'Label','Add to current frames' ,...
+                'callback',@(src,evnt)obj.asObj.markers.addToCurrentFrames(obj.getPosition));
+            uimenu(obj.fcmh.marker,'Label','Send to all frames' ,...
+                'callback',@(src,evnt)obj.apply2allCb('markers.add',true,obj.getPosition),...
+                'Separator','on');
+            uimenu(obj.fcmh.marker,'Label','Send to current frames' ,...
+                'callback',@(src,evnt)obj.apply2allCb('markers.addToCurrentFrames',true,obj.getPosition));
+
+            
             % user cursor position callback
-            sub4 = uimenu(obj.fcmh.base,'Label', 'User cursor position Function');
+            sub4 = uimenu(obj.fcmh.base,'Label', 'User cursor position Function',...
+                'Separator','on');
             obj.fcmh.cursorPosCb = uimenu(sub4,'Label', 'Toggle continuous call(C)',...
                 'Callback', @(src, event)obj.toggleCallUserCursorPosFunc(),...
                 'Checked','off');
@@ -731,15 +745,10 @@ classdef asCursorPosClass < handle
                 'Callback', @(src, event)obj.toggleSend(),...
                 'Checked',arrShow.boolToOnOff(obj.sendCursorOnMovement),...
                 'Separator','off');
-            
-            
-            
+                        
+            % phase circle
             obj.fcmh.drawPhaseCircle = uimenu(obj.fcmh.base,'Label','Draw phase circle continuously (Shift + p)' ,...
                 'callback',@(src,evnt)obj.toggleDrawPhaseCircle);
-            %             % auto enable phase circle plot
-            %             if ~isreal(obj.data.dat)
-            %                 obj.toggleDrawPhaseCircle();
-            %             end
             
         end
         

@@ -248,7 +248,7 @@ classdef arrShow < handle
                             renderUi = option_value;                            
                         case 'offset' % offset to the asSelection class
                             selectionOffset = option_value;                            
-                        case 'markers' % pixel markers
+                        case {'markers','marker'} % pixel markers
                             pixMarkers = option_value;
                             
                         otherwise
@@ -437,7 +437,7 @@ classdef arrShow < handle
             
             
             % pixel markers
-            obj.markers = asMarkerClass(obj.selection, pixMarkers, obj.mbh.markers);
+            obj.markers = asMarkerClass(obj.selection, pixMarkers, obj.mbh.markers, @obj.applyToRelatives);
             
             
             % if specific figure position is given, resize the gui
@@ -2905,6 +2905,11 @@ classdef arrShow < handle
                 end
             end
             
+            % marker button
+            obj.tbh.showMarker = uipushtool('Parent',toolBar,'Tag','Annotation.showMarker',...
+                'TooltipString', 'Show/Hide Marker',...
+                'ClickedCallback', @(src, evnt)obj.markers.toggleVisibility(),...
+                'CData',obj.icons.showMarker);
             
             
             % lock controls
