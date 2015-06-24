@@ -16,7 +16,9 @@ phi = angle(img(pos(1),pos(2)));
 
 ah = asObj.getCurrentAxesHandle;
 
-dim = asObj.getImageDimensions;
+% dim = asObj.getImageDimensions;
+z = asObj.getZoom;
+dim = diff(z,1,2);
 radius = max(dim(1:2))/RADIUSDIV;
 
 
