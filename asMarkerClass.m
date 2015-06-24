@@ -406,7 +406,7 @@ classdef asMarkerClass < handle
                         markerHandles{i}.setColor(obj.color);
                     case 2
                         % rectangle
-                        markerHandles{i} = rectangle('Parent',ah,'Position',[P(2), P(1), 1,1],'Curvature',[0,0],...
+                        markerHandles{i} = rectangle('Parent',ah,'Position',[P(2)-.5, P(1)-.5, 1,1],'Curvature',[0,0],...
                         'HitTest','off','EdgeColor',obj.color);
 
                     otherwise

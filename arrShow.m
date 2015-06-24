@@ -220,7 +220,7 @@ classdef arrShow < handle
                             CW = option_value;
                         case 'select'
                             selectedImageStr = option_value;
-                        case 'complexselect'
+                        case {'complexselect','cplxselect','cplx','complex','cplxsel'}
                             initComplexSelect = option_value;
                         case {'colormap', 'stdcolormap'}
                             obj.stdColormap = option_value;
@@ -248,7 +248,7 @@ classdef arrShow < handle
                             renderUi = option_value;                            
                         case 'offset' % offset to the asSelection class
                             selectionOffset = option_value;                            
-                        case {'markers','marker'} % pixel markers
+                        case {'markers','marker','mark'} % pixel markers
                             pixMarkers = option_value;
                             
                         otherwise
