@@ -239,7 +239,28 @@ classdef asDataClass < handle
             obj.applyDimFun(dim,@coilCombineMarkus);
         end
             
-        
+
+        function conj(obj)
+            
+            % check if destructive functions are allowed
+            if ~obj.enableDestrFun
+                return;
+            end            
+
+            obj.dat = conj(obj.dat);
+            obj.updFig();
+        end
+
+        function uminus(obj)
+            
+            % check if destructive functions are allowed
+            if ~obj.enableDestrFun
+                return;
+            end            
+
+            obj.dat = uminus(obj.dat);
+            obj.updFig();
+        end
         
         function squeeze(obj)
             % squeezes the data array and updates the selection etc. It

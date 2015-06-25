@@ -220,7 +220,7 @@ classdef arrShow < handle
                             CW = option_value;
                         case 'select'
                             selectedImageStr = option_value;
-                        case 'complexselect'
+                        case {'complexselect','cplxselect','cplx','complex','cplxsel'}
                             initComplexSelect = option_value;
                         case {'colormap', 'stdcolormap'}
                             obj.stdColormap = option_value;
@@ -248,7 +248,7 @@ classdef arrShow < handle
                             renderUi = option_value;                            
                         case 'offset' % offset to the asSelection class
                             selectionOffset = option_value;                            
-                        case 'markers' % pixel markers
+                        case {'markers','marker','mark'} % pixel markers
                             pixMarkers = option_value;
                             
                         otherwise
@@ -437,7 +437,7 @@ classdef arrShow < handle
             
             
             % pixel markers
-            obj.markers = asMarkerClass(obj.selection, pixMarkers, obj.mbh.markers);
+            obj.markers = asMarkerClass(obj.selection, pixMarkers, obj.mbh.markers, @obj.applyToRelatives);
             
             
             % if specific figure position is given, resize the gui
@@ -1541,7 +1541,10 @@ classdef arrShow < handle
                     'stdcolormap',    obj(i).getColormap('standard'),...
                     'phasecolormap',  obj(i).getColormap('phase'),...
                     'position',       obj(i).getFigurePosition,...
-                    'useglobalarray', obj(i).useGlobalArray};
+                    'useglobalarray', obj(i).useGlobalArray,...
+                    'markers',        obj(i).markers.get(),...
+                    'offset',         obj(i).selection.getOffsets(),...
+                    'select',         obj(i).selection.getValue(false)};
                 pars = [pars, varargin]; %#ok<AGROW>
                 obj(i) = arrShow(obj(i).getAllImages, pars{:});
                 
@@ -2588,18 +2591,21 @@ classdef arrShow < handle
             %Operations menu
             mb_operations = uimenu(obj.fh,'Label','Operations');
             uimenu(mb_operations,'Label','Rot90'   ,...
-                'callback',@(src, evnt)obj.data.rot90(1),...
-                'Separator','off');
+                'callback',@(src, evnt)obj.data.rot90(1));
             uimenu(mb_operations,'Label','Rot-90'   ,...
-                'callback',@(src, evnt)obj.data.rot90(-1),...
-                'Separator','off');
+                'callback',@(src, evnt)obj.data.rot90(-1));
             uimenu(mb_operations,'Label','Crop around center'   ,...
-                'callback',@(src, evnt)obj.data.crop,...
-                'Separator','off');
+                'callback',@(src, evnt)obj.data.crop);
             uimenu(mb_operations,'Label','Crop from zoom'   ,...
-                'callback',@(src, evnt)obj.cropFromZoom(),...
-                'Separator','off');
+                'callback',@(src, evnt)obj.cropFromZoom());
             
+
+            uimenu(mb_operations,'Label','Conjugate (conj)'   ,...
+                'callback',@(src, evnt)obj.data.conj(),...
+                'Separator','on');
+            uimenu(mb_operations,'Label','Negate (uminus)'   ,...
+                'callback',@(src, evnt)obj.data.uminus());
+
             
             uimenu(mb_operations,'Label','FFT all images (Shift + f)'   ,...
                 'callback',@(src,evnt)obj.data.fft2All,...
@@ -2902,6 +2908,11 @@ classdef arrShow < handle
                 end
             end
             
+            % marker button
+            obj.tbh.showMarker = uipushtool('Parent',toolBar,'Tag','Annotation.showMarker',...
+                'TooltipString', 'Show/Hide Marker',...
+                'ClickedCallback', @(src, evnt)obj.markers.toggleVisibility(),...
+                'CData',obj.icons.showMarker);
             
             
             % lock controls

@@ -33,6 +33,7 @@ classdef (Sealed) asIconClass <handle
         upload
         wsObj
         filter
+        showMarker
     end
     
     % private constructor
