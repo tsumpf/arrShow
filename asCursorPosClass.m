@@ -26,6 +26,7 @@ classdef asCursorPosClass < handle
         th  = [];    % text handles
         sbh = [];    % send button handle
         cmh = [];    % contextMenu handles
+        mbh = [];    % menu bar handle of the arrShow parent window
         fcmh = [];   % figure contextMenu handles
         icons = [];  % icon class handle
         
@@ -66,6 +67,7 @@ classdef asCursorPosClass < handle
                 parentFigureHandle,...
                 parentPanelHandle,...
                 figureContextMenuHandle,...
+                menuBarHandle,...
                 icons,...
                 complexMode,...
                 apply2allCb,...
@@ -76,6 +78,7 @@ classdef asCursorPosClass < handle
             obj.fh                      = parentFigureHandle;
             obj.ph                      = parentPanelHandle;
             obj.fcmh                    = figureContextMenuHandle;
+            obj.mbh                     = menuBarHandle;
             obj.apply2allCb             = apply2allCb;
             obj.getCurrentAxesHandleCb  = getCurrentAxesHandleCb;
             obj.asObj = asObj;
@@ -426,11 +429,13 @@ classdef asCursorPosClass < handle
             
             switch get(obj.fcmh.drawPhaseCircle,'Checked')
                 case 'off'
-                    obj.drawPhaseCircOnMovement = true;
+                    obj.drawPhaseCircOnMovement = true;                
+                    set(obj.mbh.phaseCircle, 'Checked','on');                    
                     set(obj.fcmh.drawPhaseCircle,'Checked','on');
                 case 'on'
                     obj.drawPhaseCircOnMovement = false;
                     set(obj.fcmh.drawPhaseCircle,'Checked','off');
+                    set(obj.mbh.phaseCircle, 'Checked','off');                    
                     ud = get(obj.getCurrentAxesHandleCb(),'UserData');
                     if isfield(ud, 'phaseCirc') && any(ishandle(ud.phaseCirc))
                         delete(ud.phaseCirc);
