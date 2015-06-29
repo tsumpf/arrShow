@@ -73,6 +73,7 @@ classdef arrShow < handle
         cpcmh   = struct;                   % control panel context menu handle
         mbh     = struct;                   % menu bar handle
         tbh     = struct;                   % tool bar handle
+        trph    = 0;                        % top right panel handle
         
         ih   = [];                          % image handle
         %  (this is an array of N handles, if we display
@@ -145,7 +146,7 @@ classdef arrShow < handle
         RESIZE_AXES_FOR_SCREENSHOTS = false;
         
         % panel positions
-        CMPLX_SEL_POS  = [5/6, 0, 1/6, 1]; % relative position and size of the complexSelector in the top Panel
+        TR_PANEL_POS  = [5/6, 0, 1/6, 1]; % relative position and size of the complexSelector in the top Panel
         STATISTICS_POS = [4/6, 0, 1/6, 1]; % relative position and size of the statistics in the top Panel
         INFOTEXT_POS   = [2/6, 0, 1/6, 1]; % ...
         WINDOWING_POS  = [3/6, 0, 1/6, 1];
@@ -210,7 +211,7 @@ classdef arrShow < handle
                     option_value = varargin{i*2};
                     
                     switch lower(option)
-                        case 'title'
+                        case {'title','tit'}
                             obj.title        = option_value;
                         case 'info'
                             infoText         = option_value;
@@ -218,7 +219,7 @@ classdef arrShow < handle
                             imageTextVal        = option_value;
                         case {'windowing','window','wdw'}
                             CW = option_value;
-                        case 'select'
+                        case {'select','sel'}
                             selectedImageStr = option_value;
                         case {'complexselect','cplxselect','cplx','complex','cplxsel'}
                             initComplexSelect = option_value;
@@ -240,13 +241,13 @@ classdef arrShow < handle
                             obj.userCallback =  option_value;
                         case 'useglobalarray'
                             obj.useGlobalArray = option_value;
-                        case 'renderui' % this option has been introduced
+                        case {'renderui','render'} % this option has been introduced
                             % to initialize an arrShow object without
                             % drawing the actual ui elements. This is
                             % currently used to create temporary object 
                             % copies which are saveable in matlab >= 2014b
                             renderUi = option_value;                            
-                        case 'offset' % offset to the asSelection class
+                        case {'offset','offs'} % offset to the asSelection class
                             selectionOffset = option_value;                            
                         case {'markers','marker','mark'} % pixel markers
                             pixMarkers = option_value;
@@ -360,12 +361,17 @@ classdef arrShow < handle
             
             % info textbox object
             obj.infotext = asInfoTextClass(obj.cph, obj.INFOTEXT_POS);
-                        
+
+            % top right panel
+            obj.trph = uipanel('visible','on','Units','normalized',...
+                'Position',obj.TR_PANEL_POS,'Parent',obj.cph,...
+                'Tag','trPanel');
+
+            
             % complex part selector (the dropdown menu on the top right of
             % the arrayShow window)
             obj.complexSelect = asCmplxChooserClass(...
-                obj.cph,...
-                obj.CMPLX_SEL_POS,...
+                obj.trph,...
                 @obj.updFig,...
                 @obj.applyToRelatives,...
                 obj.icons.send);
