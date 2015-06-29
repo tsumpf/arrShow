@@ -31,6 +31,7 @@ classdef arrShow < handle
         roi             = [];               % region of interest object
         imageText       = [];               % image text object
         markers         = [];               % pixel markers
+        sendGroup       = [];               % asSendGroupClass
         
         UserData        = [];               % this is not used within this class
         % and may be set and
@@ -177,7 +178,7 @@ classdef arrShow < handle
     
     properties (Constant, GetAccess = public)
         % arrShow version
-        VERSION = 0.34;
+        VERSION = 0.35;
     end
     
     %#ok<*FPARK>
@@ -391,6 +392,9 @@ classdef arrShow < handle
                 obj.complexSelect.setSelection(initComplexSelect, true);
             end
             
+
+            % send group class
+            obj.sendGroup = asSendGroupClass(obj.trph);
             
             
             % init the figure context menu (first entries are created
@@ -1910,18 +1914,29 @@ classdef arrShow < handle
             
             % create command string for 'eval'
             cmd = ['obj.relatives(o).',funName,'(varargin{:})'];
+            % it would probably be nicer to use something like
+            % out{o} = obj.relatives(o).(funName)(varargin{:});
+            % instead of eval. However, at this syntax doesn't
+            % work if funName addresses subfunctions as e.g. in
+            % funName = 'window.setCW' ...
             
             % preallocate output cell vector
             if nargout > 0
                 out = cell(obj.noRelatives,1);
             end
 
+            grp = obj.sendGroup.get;
+            if grp == -1
+                return;
+            end
             o = 1;
             while o <= obj.noRelatives
                 if isvalid(obj.relatives(o))
-                    if includeSelf || obj.relatives(o) ~= obj
+                    if includeSelf || obj.relatives(o) ~= obj && ...
+                        (grp ==  0 || obj.relatives(o).sendGroup.get == grp||...
+                        obj.relatives(o).sendGroup.get == 0)
                         if nargout == 1
-                            out{o} = eval(cmd);
+                            out{o} = eval(cmd);                            	
                         else
                             eval(cmd);
                         end
