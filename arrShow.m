@@ -199,6 +199,7 @@ classdef arrShow < handle
             initComplexSelect = [];
             infoText = '';
             renderUi = true;
+            viewMode = 'default'; % could be quiver (vector plot) as well
             if nargin > 1
                 if length(varargin) ==1
                     obj.title = varargin{1};
@@ -252,6 +253,8 @@ classdef arrShow < handle
                             selectionOffset = option_value;                            
                         case {'markers','marker','mark'} % pixel markers
                             pixMarkers = option_value;
+                        case {'viewmode','view','mode'} % view mode can be 'default' or 'quiver' (or equivalent: 'vector')
+                            viewMode = option_value;
                             
                         otherwise
                             error('arrShow:varargin','unknown option [%s]!\n',option);
@@ -470,6 +473,11 @@ classdef arrShow < handle
                 % on)
             end
             
+            % check, if we want to use a vector plot
+            if any(strcmp(viewMode,{'quiver','vector'}))
+                set(obj.mbh.quiver,'Checked','on');
+            end
+                    
             % all gui components should be ready by now, so start
             % updateFigure to find the selected array part and convert it
             % to an image object in the axes region
@@ -2352,16 +2360,20 @@ classdef arrShow < handle
             end
         end
         
-        function toggleUseQuiver(obj)
-            switch get(obj.mbh.quiver,'Checked')
-                case 'off'
-                    set(obj.mbh.quiver,'Checked','on');
-                case 'on'
-                    set(obj.mbh.quiver,'Checked','off');
+        function toggleUseQuiver(obj, bool)
+            if nargin < 2
+                % if no state is given:
+                % just invert the previous setting
+                bool = ~arrShow.onOffToBool(get(obj.mbh.quiver,'Checked'));
+            end
+            
+            if bool
+                set(obj.mbh.quiver,'Checked','on');
+            else
+                set(obj.mbh.quiver,'Checked','off');
             end
             obj.updFig();
-        end
-        
+        end        
         function toggeShowVectorPlot(obj)
             %... just an alias to useQuiver
             obj.toggleUseQuiver();
