@@ -1142,8 +1142,11 @@ classdef arrShow < handle
                     fprintf('Fig. %d: overwriting existing file: %s\n',obj.getFigureNumber(), filename);
                 end
                 
+                % get axes handle
+                ah = obj.getCurrentAxesHandle;
+                
                 % get colorbar handle
-                ch = colorbar('peer',obj.getCurrentAxesHandle);
+                ch = colorbar('peer',ah);
                 
                 % create a help figure without menues
                 helpFigure = figure('MenuBar','none',...
@@ -1152,7 +1155,7 @@ classdef arrShow < handle
                 colormap(obj.getColormap('current',true));
                 
                 % copy current axes to the help figure
-                helpAxes = copyobj(ch,helpFigure);
+                helpAxes = copyobj([ch,ah],helpFigure);
                 set(helpAxes,'Units','normalized','position',[0.3,0.1,.05,0.8])
                 
                 set(helpAxes,'fontsize',14)
