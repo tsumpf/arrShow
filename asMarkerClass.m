@@ -129,7 +129,7 @@ classdef asMarkerClass < handle
                     obj.pos = [obj.pos, pos];
                 end
             end
-            obj.draw();
+            obj.redraw();
         end
         
         function bool = getVisibility(obj)
