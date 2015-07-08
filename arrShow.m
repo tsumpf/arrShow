@@ -691,7 +691,8 @@ classdef arrShow < handle
             
         end
         
-        function batchExportDimension(obj, dim, filename, createMovie, framerate)
+        function batchExportDimension(obj, dim, filename, createMovie, framerate,...
+                screenshot, includePanels, includeCursor, scrshotPauseTime)
             % export all 2D frames of dimension dim to either bitmap files
             % or an avi file
             
@@ -699,7 +700,19 @@ classdef arrShow < handle
             if nargin < 4 ||isempty(createMovie)
                 createMovie = false;
             end
-            
+            if nargin < 6 || isempty(screenshot)
+               screenshot = false;
+            end
+            if nargin < 7 || isempty(includePanels)
+               includePanels = false;
+            end
+            if nargin < 8 || isempty(includeCursor)
+               includeCursor = false;
+            end
+            if nargin < 9 || isempty(scrshotPauseTime)
+               scrshotPauseTime = 0;
+            end
+
             % use the image title as filename by default
             if nargin < 3 || isempty(filename)
                 filename = obj.title;
@@ -744,9 +757,7 @@ classdef arrShow < handle
                 end
                 vwObj.FrameRate = framerate;
                 vwObj.open();
-            end            
 
-            if createMovie
                 % check if we need to crop the frames: .avi-files require that
                 % the dimensions be divisible by four. Therefore, in
                 % exportCurrentImage, we make sure that they are. Since that
@@ -768,14 +779,16 @@ classdef arrShow < handle
             
             % store the current selection
             origValue = obj.selection.getCurrentVcValue;
-            
+
             % loop through all frames in the export dimension
             obj.selection.setCurrentVcValue(1);
             for i = 1 : dims(dim);
                 if createMovie
-                    obj.exportCurrentImage(vwObj);
+                    obj.exportCurrentImage(vwObj,...
+                        screenshot, includePanels, includeCursor, scrshotPauseTime);
                 else
-                    obj.exportCurrentImage([filename,'_',num2str(i, '%05.5d'),'.png']);
+                    obj.exportCurrentImage([filename,'_',num2str(i, '%05.5d'),'.png'],...
+                        screenshot, includePanels, includeCursor, scrshotPauseTime);
                 end
                 obj.selection.increaseCurrentVc;
             end
