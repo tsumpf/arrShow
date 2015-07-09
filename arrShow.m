@@ -31,6 +31,7 @@ classdef arrShow < handle
         roi             = [];               % region of interest object
         imageText       = [];               % image text object
         markers         = [];               % pixel markers
+        sendGroup       = [];               % asSendGroupClass
         
         UserData        = [];               % this is not used within this class
         % and may be set and
@@ -73,6 +74,7 @@ classdef arrShow < handle
         cpcmh   = struct;                   % control panel context menu handle
         mbh     = struct;                   % menu bar handle
         tbh     = struct;                   % tool bar handle
+        trph    = 0;                        % top right panel handle
         
         ih   = [];                          % image handle
         %  (this is an array of N handles, if we display
@@ -145,7 +147,7 @@ classdef arrShow < handle
         RESIZE_AXES_FOR_SCREENSHOTS = false;
         
         % panel positions
-        CMPLX_SEL_POS  = [5/6, 0, 1/6, 1]; % relative position and size of the complexSelector in the top Panel
+        TR_PANEL_POS  = [5/6, 0, 1/6, 1]; % relative position and size of the complexSelector in the top Panel
         STATISTICS_POS = [4/6, 0, 1/6, 1]; % relative position and size of the statistics in the top Panel
         INFOTEXT_POS   = [2/6, 0, 1/6, 1]; % ...
         WINDOWING_POS  = [3/6, 0, 1/6, 1];
@@ -176,7 +178,7 @@ classdef arrShow < handle
     
     properties (Constant, GetAccess = public)
         % arrShow version
-        VERSION = 0.34;
+        VERSION = 0.35;
     end
     
     %#ok<*FPARK>
@@ -197,6 +199,7 @@ classdef arrShow < handle
             initComplexSelect = [];
             infoText = '';
             renderUi = true;
+            viewMode = 'default'; % could be quiver (vector plot) as well
             if nargin > 1
                 if length(varargin) ==1
                     obj.title = varargin{1};
@@ -210,7 +213,7 @@ classdef arrShow < handle
                     option_value = varargin{i*2};
                     
                     switch lower(option)
-                        case 'title'
+                        case {'title','tit'}
                             obj.title        = option_value;
                         case 'info'
                             infoText         = option_value;
@@ -218,7 +221,7 @@ classdef arrShow < handle
                             imageTextVal        = option_value;
                         case {'windowing','window','wdw'}
                             CW = option_value;
-                        case 'select'
+                        case {'select','sel'}
                             selectedImageStr = option_value;
                         case {'complexselect','cplxselect','cplx','complex','cplxsel'}
                             initComplexSelect = option_value;
@@ -240,16 +243,18 @@ classdef arrShow < handle
                             obj.userCallback =  option_value;
                         case 'useglobalarray'
                             obj.useGlobalArray = option_value;
-                        case 'renderui' % this option has been introduced
+                        case {'renderui','render'} % this option has been introduced
                             % to initialize an arrShow object without
                             % drawing the actual ui elements. This is
                             % currently used to create temporary object 
                             % copies which are saveable in matlab >= 2014b
                             renderUi = option_value;                            
-                        case 'offset' % offset to the asSelection class
+                        case {'offset','offs'} % offset to the asSelection class
                             selectionOffset = option_value;                            
                         case {'markers','marker','mark'} % pixel markers
                             pixMarkers = option_value;
+                        case {'viewmode','view','mode'} % view mode can be 'default' or 'quiver' (or equivalent: 'vector')
+                            viewMode = option_value;
                             
                         otherwise
                             error('arrShow:varargin','unknown option [%s]!\n',option);
@@ -360,12 +365,17 @@ classdef arrShow < handle
             
             % info textbox object
             obj.infotext = asInfoTextClass(obj.cph, obj.INFOTEXT_POS);
-                        
+
+            % top right panel
+            obj.trph = uipanel('visible','on','Units','normalized',...
+                'Position',obj.TR_PANEL_POS,'Parent',obj.cph,...
+                'Tag','trPanel');
+
+            
             % complex part selector (the dropdown menu on the top right of
             % the arrayShow window)
             obj.complexSelect = asCmplxChooserClass(...
-                obj.cph,...
-                obj.CMPLX_SEL_POS,...
+                obj.trph,...
                 @obj.updFig,...
                 @obj.applyToRelatives,...
                 obj.icons.send);
@@ -385,6 +395,9 @@ classdef arrShow < handle
                 obj.complexSelect.setSelection(initComplexSelect, true);
             end
             
+
+            % send group class
+            obj.sendGroup = asSendGroupClass(obj.trph);
             
             
             % init the figure context menu (first entries are created
@@ -396,6 +409,7 @@ classdef arrShow < handle
                 obj.fh,...
                 obj.bph,...
                 obj.fcmh,...
+                obj.mbh,...
                 obj.icons,...
                 ~dataIsreal,...
                 @obj.applyToRelatives,...
@@ -459,6 +473,11 @@ classdef arrShow < handle
                 % on)
             end
             
+            % check, if we want to use a vector plot
+            if any(strcmp(viewMode,{'quiver','vector'}))
+                set(obj.mbh.quiver,'Checked','on');
+            end
+                    
             % all gui components should be ready by now, so start
             % updateFigure to find the selected array part and convert it
             % to an image object in the axes region
@@ -672,7 +691,8 @@ classdef arrShow < handle
             
         end
         
-        function batchExportDimension(obj, dim, filename, createMovie, framerate)
+        function batchExportDimension(obj, dim, filename, createMovie, framerate,...
+                screenshot, includePanels, includeCursor, scrshotPauseTime)
             % export all 2D frames of dimension dim to either bitmap files
             % or an avi file
             
@@ -680,7 +700,19 @@ classdef arrShow < handle
             if nargin < 4 ||isempty(createMovie)
                 createMovie = false;
             end
-            
+            if nargin < 6 || isempty(screenshot)
+               screenshot = false;
+            end
+            if nargin < 7 || isempty(includePanels)
+               includePanels = false;
+            end
+            if nargin < 8 || isempty(includeCursor)
+               includeCursor = false;
+            end
+            if nargin < 9 || isempty(scrshotPauseTime)
+               scrshotPauseTime = 0;
+            end
+
             % use the image title as filename by default
             if nargin < 3 || isempty(filename)
                 filename = obj.title;
@@ -725,9 +757,7 @@ classdef arrShow < handle
                 end
                 vwObj.FrameRate = framerate;
                 vwObj.open();
-            end            
 
-            if createMovie
                 % check if we need to crop the frames: .avi-files require that
                 % the dimensions be divisible by four. Therefore, in
                 % exportCurrentImage, we make sure that they are. Since that
@@ -749,14 +779,16 @@ classdef arrShow < handle
             
             % store the current selection
             origValue = obj.selection.getCurrentVcValue;
-            
+
             % loop through all frames in the export dimension
             obj.selection.setCurrentVcValue(1);
             for i = 1 : dims(dim);
                 if createMovie
-                    obj.exportCurrentImage(vwObj);
+                    obj.exportCurrentImage(vwObj,...
+                        screenshot, includePanels, includeCursor, scrshotPauseTime);
                 else
-                    obj.exportCurrentImage([filename,'_',num2str(i, '%05.5d'),'.png']);
+                    obj.exportCurrentImage([filename,'_',num2str(i, '%05.5d'),'.png'],...
+                        screenshot, includePanels, includeCursor, scrshotPauseTime);
                 end
                 obj.selection.increaseCurrentVc;
             end
@@ -1110,8 +1142,11 @@ classdef arrShow < handle
                     fprintf('Fig. %d: overwriting existing file: %s\n',obj.getFigureNumber(), filename);
                 end
                 
+                % get axes handle
+                ah = obj.getCurrentAxesHandle;
+                
                 % get colorbar handle
-                ch = colorbar('peer',obj.getCurrentAxesHandle);
+                ch = colorbar('peer',ah);
                 
                 % create a help figure without menues
                 helpFigure = figure('MenuBar','none',...
@@ -1120,7 +1155,7 @@ classdef arrShow < handle
                 colormap(obj.getColormap('current',true));
                 
                 % copy current axes to the help figure
-                helpAxes = copyobj(ch,helpFigure);
+                helpAxes = copyobj([ch,ah],helpFigure);
                 set(helpAxes,'Units','normalized','position',[0.3,0.1,.05,0.8])
                 
                 set(helpAxes,'fontsize',14)
@@ -1904,18 +1939,29 @@ classdef arrShow < handle
             
             % create command string for 'eval'
             cmd = ['obj.relatives(o).',funName,'(varargin{:})'];
+            % it would probably be nicer to use something like
+            % out{o} = obj.relatives(o).(funName)(varargin{:});
+            % instead of eval. However, at this syntax doesn't
+            % work if funName addresses subfunctions as e.g. in
+            % funName = 'window.setCW' ...
             
             % preallocate output cell vector
             if nargout > 0
                 out = cell(obj.noRelatives,1);
             end
 
+            grp = obj.sendGroup.get;
+            if grp == -1
+                return;
+            end
             o = 1;
             while o <= obj.noRelatives
                 if isvalid(obj.relatives(o))
-                    if includeSelf || obj.relatives(o) ~= obj
+                    if includeSelf || obj.relatives(o) ~= obj && ...
+                        (grp ==  0 || obj.relatives(o).sendGroup.get == grp||...
+                        obj.relatives(o).sendGroup.get == 0)
                         if nargout == 1
-                            out{o} = eval(cmd);
+                            out{o} = eval(cmd);                            	
                         else
                             eval(cmd);
                         end
@@ -2330,16 +2376,20 @@ classdef arrShow < handle
             end
         end
         
-        function toggleUseQuiver(obj)
-            switch get(obj.mbh.quiver,'Checked')
-                case 'off'
-                    set(obj.mbh.quiver,'Checked','on');
-                case 'on'
-                    set(obj.mbh.quiver,'Checked','off');
+        function toggleUseQuiver(obj, bool)
+            if nargin < 2
+                % if no state is given:
+                % just invert the previous setting
+                bool = ~arrShow.onOffToBool(get(obj.mbh.quiver,'Checked'));
+            end
+            
+            if bool
+                set(obj.mbh.quiver,'Checked','on');
+            else
+                set(obj.mbh.quiver,'Checked','off');
             end
             obj.updFig();
-        end
-        
+        end        
         function toggeShowVectorPlot(obj)
             %... just an alias to useQuiver
             obj.toggleUseQuiver();
@@ -2642,9 +2692,12 @@ classdef arrShow < handle
             uimenu(mb_roi,'Label','Delete'   ,...
                 'Separator','off', 'callback',@(src,evnt)obj.deleteRoi);
             
+            obj.mbh.phaseCircle = uimenu(mb_tools,'Label','Draw phase circle'   ,...
+                'callback',@(src,evnt)obj.cursor.toggleDrawPhaseCircle);
+
             uimenu(mb_tools,'Label','Surface plot' ,...
                 'callback',@(src,evnt)createSurfacePlot,...
-                'Separator','on');
+                'Separator','off');
             function createSurfacePlot()
                 imgs = obj.getSelectedImages(false);
                 if ~isreal(imgs)
