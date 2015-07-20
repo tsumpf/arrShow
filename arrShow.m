@@ -3152,6 +3152,7 @@ classdef arrShow < handle
             uimenu(menuHandle,'Label','Red/Green periodic','callback',@(src,evnt)cb('redgreen_periodic'));
             uimenu(menuHandle,'Label','Jet (j)'      ,'callback',@(src,evnt)cb('jet(256)'));
             uimenu(menuHandle,'Label','YlGnBu_r (y)'     ,'callback',@(src,evnt)cb('YlGnBu_r'));
+			uimenu(menuHandle,'Label','viridis  (alt+v)' ,'callback',@(src,evnt)cb('viridis'));
             if ~verLessThan('matlab','8.4.0')
                 uimenu(menuHandle,'Label','Parula'      ,'callback',@(src,evnt)cb('parula(256)'));
             end
@@ -3693,6 +3694,8 @@ classdef arrShow < handle
                         obj.setColormap('hot(256)');
                     case 'y'
                         obj.setColormap('ylgnbu_r');
+					case 'av'
+						obj.setColormap('viridis');
                         
                         % windowing
                     case 'cc'
