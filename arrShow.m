@@ -4255,6 +4255,31 @@ classdef arrShow < handle
             end
             str = str(~delIdx);
         end
+        
+        function registerPaths(savePaths)
+            % register and (optionally) save arrayShow default paths
+            if nargin < 1 || isempty(savePaths)
+                savePaths = true;
+            end
+            basePath = fileparts(mfilename('fullpath'));
+            addpath(basePath);
+            addpath([basePath,filesep,'supportFunctions']);
+            addpath([basePath,filesep,'scripts']);
+            addpath([basePath,filesep,'cursorPosFcn']);
+            addpath([basePath,filesep,'customColormaps']);
+            
+            if savePaths
+                % cd to the directory of the pathdef.m
+                cd(fileparts(which('pathdef.m')));
+
+                % save path
+                savepath();
+
+                % cd back
+                cd(basePath);                
+            end
+        end
+        
     end
     methods (Static, Access = private)
                 
@@ -4304,18 +4329,12 @@ classdef arrShow < handle
             
             if ~everythingSeemsFine
                 % try adding the paths
-                fprintf(['Not all paths to the arraySow support functions ',...
+                fprintf(['Not all paths to the arrayShow support functions ',...
                     'seem to be registered.\nTrying to add it ',...
                     'automatically...\nTo avoid this message in future Matlab sessions ',...
-                    'call savepath or run the README.m again.\n']);
-                basePath = fileparts(mfilename('fullpath'));
-                addpath(basePath);
-                addpath([basePath,filesep,'supportFunctions']);
-                addpath([basePath,filesep,'scripts']);
-                addpath([basePath,filesep,'cursorPosFcn']);
-                addpath([basePath,filesep,'customColormaps']);
-            end
-            
+                    'call savepath in this matlab session or run arrShow.registerPaths().\n']);
+                arrShow.registerPaths(false);
+            end            
         end
         
     end
