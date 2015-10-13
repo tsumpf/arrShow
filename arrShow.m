@@ -2269,6 +2269,34 @@ classdef arrShow < handle
                 % create the roi
                 obj.roi = asRoiClass(obj.getCurrentAxesHandle,roiPos,...
                     @obj.roiCallback);
+                
+                % feature for circular roi: 
+                % when roi only consists of 2 points -> create new points
+                % arranged in a circle around first point 
+                % (radius defined by second)
+                
+                roiPos = obj.roi.getPosition;
+                if numel(roiPos) == 4
+                        delete(obj.roi);
+                        center = roiPos(1,:);   % first point defines center
+                        radius = sqrt(sum((roiPos(1,:)-roiPos(2,:)).^2));   % distance between points defines radius
+                        if radius > 21          % limit Number of new points N
+                            N = 32;
+                        else
+                            N=round(1.5*radius);
+                            if mod(N,2) == 1    % prefer symmetric roi
+                                N = N+1;
+                            end
+                        end
+                        roiPos = zeros(N,2);    % set new points
+                        for i = 1:N
+                            phi = i*2*pi/N;
+                            roiPos(i,:) = center+radius.*[sin(phi) cos(phi)];
+                        end
+                        obj.roi = asRoiClass(obj.getCurrentAxesHandle,roiPos,...
+                            @obj.roiCallback);
+                end
+                clearvars roiPos                % clean up
 
                 % and re-enable the disabled controls
                 obj.selection.enable(true);
