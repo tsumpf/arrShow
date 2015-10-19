@@ -3183,8 +3183,8 @@ classdef arrShow < handle
             uimenu(menuHandle,'Label','Jet (j)'      ,'callback',@(src,evnt)cb('jet(256)'));
             uimenu(menuHandle,'Label','YlGnBu_r (y)'     ,'callback',@(src,evnt)cb('YlGnBu_r'));
 			uimenu(menuHandle,'Label','viridis  (alt+v)' ,'callback',@(src,evnt)cb('viridis'));
-			uimenu(menuHandle,'Label','RdBu_r'     ,'callback',@(src,evnt)cb('RdBu_r'));
-			uimenu(menuHandle,'Label','seismic'     ,'callback',@(src,evnt)cb('seismic'));
+			uimenu(menuHandle,'Label','RdBu_r (alt+r)'     ,'callback',@(src,evnt)cb('RdBu_r'));
+			uimenu(menuHandle,'Label','seismic (alt+s)'     ,'callback',@(src,evnt)cb('seismic'));
             if ~verLessThan('matlab','8.4.0')
                 uimenu(menuHandle,'Label','Parula'      ,'callback',@(src,evnt)cb('parula(256)'));
             end
@@ -3728,6 +3728,10 @@ classdef arrShow < handle
                         obj.setColormap('ylgnbu_r');
 					case 'av'
 						obj.setColormap('viridis');
+					case 'as'
+						obj.setColormap('seismic');
+					case 'ar'
+						obj.setColormap('rdbu_r');
                         
                         % windowing
                     case 'cc'
