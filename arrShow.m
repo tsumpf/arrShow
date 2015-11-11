@@ -692,7 +692,7 @@ classdef arrShow < handle
         end
         
         function batchExportDimension(obj, dim, filename, createMovie, framerate,...
-                screenshot, includePanels, includeCursor, scrshotPauseTime)
+                screenshot, includePanels, includeCursor, scrshotPauseTime, movieType)
             % export all 2D frames of dimension dim to either bitmap files
             % or an avi file
             
@@ -711,6 +711,9 @@ classdef arrShow < handle
             end
             if nargin < 9 || isempty(scrshotPauseTime)
                scrshotPauseTime = 0;
+            end
+            if nargin < 10 || isempty(movieType)
+               movieType = 'Uncompressed AVI';
             end
 
             % use the image title as filename by default
@@ -747,7 +750,7 @@ classdef arrShow < handle
             % if we want to create a movie file, initialize the VideoWriter
             % object
             if createMovie
-                vwObj = VideoWriter(filename,'Uncompressed AVI');
+                vwObj = VideoWriter(filename, movieType);
                 if nargin < 5 || isempty(framerate)
                     framerate = mydlg('Enter framerate','Enter framerate for the movie','30');
                     framerate = str2double(framerate);
@@ -804,15 +807,19 @@ classdef arrShow < handle
             disp('Done batchexport.');
         end
         
-        function createMovie(obj, dim, framerate)
+        function createMovie(obj, dim, framerate, movieType)
             % shortcut to batchExportDimension with enabled movie export
+            if nargin < 4
+                movieType = 'Uncompressed AVI';
+            end
             if nargin < 3
                 framerate = [];
             end
             if nargin < 2
                 dim = [];
             end
-            obj.batchExportDimension(dim, [], true, framerate);
+            obj.batchExportDimension(dim, [], true, framerate, ...
+                [],[],[],[],movieType);
         end
         
         function img = getScreenshot(obj, includePanels, includeCursor, scrshotPauseTime)
