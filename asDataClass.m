@@ -158,7 +158,7 @@ classdef asDataClass < handle
             else
                 if k ~= 1 && k ~=-1
                     warning('arrShow:rot90','k can be either -1 or 1');
-                    k = 1;
+                    return;
                 end
             end
 
