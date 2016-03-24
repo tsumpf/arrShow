@@ -974,7 +974,20 @@ classdef arrShow < handle
                 if size(img,3) == 3
                     % cdata is already in RGB format, so just write it
                     % to file
-                    writeFrame(img,filenameOrVideoWriterObj);
+                    [~, ~, extension] = fileparts(filenameOrVideoWriterObj);
+                    
+                    if strcmp(extension, '.png')
+                        %NaN values are rendered transparent
+                        % get NaN positions
+                        NaNpos = isnan(img);
+                        % if one component is NaN, set it to transparent
+                        NaNpos = double(~prod(NaNpos,3));
+                        
+                        writeFrame(img,filenameOrVideoWriterObj,...
+                            'alpha', NaNpos);
+                    else
+                        writeFrame(img,filenameOrVideoWriterObj);
+                    end
                 else
                     % cdata represents intensity values while the
                     % visible representation is windowed and color coded
@@ -1002,7 +1015,20 @@ classdef arrShow < handle
                     rgbImg = ind2rgb(round(img), cmap);
                     
                     % write image to file
-                    writeFrame(rgbImg,filenameOrVideoWriterObj);
+                    if writeVideo
+                        writeFrame(rgbImg,filenameOrVideoWriterObj);
+                    else
+                        [~, ~, extension] = ...
+                            fileparts(filenameOrVideoWriterObj);                    
+                        if strcmp(extension, '.png')
+                            % save NaN positions
+                            NaNpos = double(~isnan(img));
+                            writeFrame(rgbImg,filenameOrVideoWriterObj,...
+                                'alpha', NaNpos);
+                        else
+                            writeFrame(rgbImg,filenameOrVideoWriterObj);
+                        end
+                    end
                     
                 end
             end
