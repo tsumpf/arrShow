@@ -81,7 +81,8 @@ for n=1:noFrames
             isComplex = false;
             colormap(ah,colorMap);        
         end
-
+        % sssr: matlab 2017b + version does not update colormap without next line 
+        set(ah,'NextPlot','replacechildren');
         imageHandle(n) = imagesc(currImg,'Parent',ah);           
 
         if isComplex
