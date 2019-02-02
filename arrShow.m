@@ -692,7 +692,7 @@ classdef arrShow < handle
         end
         
         function batchExportDimension(obj, dim, filename, createMovie, framerate,...
-                screenshot, includePanels, includeCursor, scrshotPauseTime)
+                screenshot, includePanels, includeCursor, scrshotPauseTime, movieType)
             % export all 2D frames of dimension dim to either bitmap files
             % or an avi file
             
@@ -711,6 +711,9 @@ classdef arrShow < handle
             end
             if nargin < 9 || isempty(scrshotPauseTime)
                scrshotPauseTime = 0;
+            end
+            if nargin < 10 || isempty(movieType)
+               movieType = 'Uncompressed AVI';
             end
 
             % use the image title as filename by default
@@ -747,7 +750,7 @@ classdef arrShow < handle
             % if we want to create a movie file, initialize the VideoWriter
             % object
             if createMovie
-                vwObj = VideoWriter(filename,'Uncompressed AVI');
+                vwObj = VideoWriter(filename, movieType);
                 if nargin < 5 || isempty(framerate)
                     framerate = mydlg('Enter framerate','Enter framerate for the movie','30');
                     framerate = str2double(framerate);
@@ -804,15 +807,19 @@ classdef arrShow < handle
             disp('Done batchexport.');
         end
         
-        function createMovie(obj, dim, framerate)
+        function createMovie(obj, dim, framerate, movieType)
             % shortcut to batchExportDimension with enabled movie export
+            if nargin < 4
+                movieType = 'Uncompressed AVI';
+            end
             if nargin < 3
                 framerate = [];
             end
             if nargin < 2
                 dim = [];
             end
-            obj.batchExportDimension(dim, [], true, framerate);
+            obj.batchExportDimension(dim, [], true, framerate, ...
+                [],[],[],[],movieType);
         end
         
         function img = getScreenshot(obj, includePanels, includeCursor, scrshotPauseTime)
@@ -967,7 +974,20 @@ classdef arrShow < handle
                 if size(img,3) == 3
                     % cdata is already in RGB format, so just write it
                     % to file
-                    writeFrame(img,filenameOrVideoWriterObj);
+                    [~, ~, extension] = fileparts(filenameOrVideoWriterObj);
+                    
+                    if strcmp(extension, '.png')
+                        %NaN values are rendered transparent
+                        % get NaN positions
+                        NaNpos = isnan(img);
+                        % if one component is NaN, set it to transparent
+                        NaNpos = double(~prod(NaNpos,3));
+                        
+                        writeFrame(img,filenameOrVideoWriterObj,...
+                            'alpha', NaNpos);
+                    else
+                        writeFrame(img,filenameOrVideoWriterObj);
+                    end
                 else
                     % cdata represents intensity values while the
                     % visible representation is windowed and color coded
@@ -995,7 +1015,20 @@ classdef arrShow < handle
                     rgbImg = ind2rgb(round(img), cmap);
                     
                     % write image to file
-                    writeFrame(rgbImg,filenameOrVideoWriterObj);
+                    if writeVideo
+                        writeFrame(rgbImg,filenameOrVideoWriterObj);
+                    else
+                        [~, ~, extension] = ...
+                            fileparts(filenameOrVideoWriterObj);                    
+                        if strcmp(extension, '.png')
+                            % save NaN positions
+                            NaNpos = double(~isnan(img));
+                            writeFrame(rgbImg,filenameOrVideoWriterObj,...
+                                'alpha', NaNpos);
+                        else
+                            writeFrame(rgbImg,filenameOrVideoWriterObj);
+                        end
+                    end
                     
                 end
             end
@@ -2269,6 +2302,36 @@ classdef arrShow < handle
                 % create the roi
                 obj.roi = asRoiClass(obj.getCurrentAxesHandle,roiPos,...
                     @obj.roiCallback);
+                
+                % feature for circular roi: 
+                % when roi only consists of 2 points -> create new points
+                % arranged in a circle around first point 
+                % (radius defined by second)
+                
+                roiPos = obj.roi.getPosition;
+                if numel(roiPos) == 4
+                        delete(obj.roi);
+                        center = roiPos(1,:);   % first point defines center
+                        radius = sqrt(sum((roiPos(1,:)-roiPos(2,:)).^2));   % distance between points defines radius
+                        if radius > 21          % limit Number of new points N
+                            N = 32;
+                        elseif radius < 5       % set at least 8 new points
+                            N = 8;
+                        else
+                            N=round(1.5*radius);
+                            if mod(N,2) == 1    % prefer symmetric roi
+                                N = N+1;
+                            end
+                        end
+                        roiPos = zeros(N,2);    % set new points
+                        for i = 1:N
+                            phi = i*2*pi/N;
+                            roiPos(i,:) = center+radius.*[sin(phi) cos(phi)];
+                        end
+                        obj.roi = asRoiClass(obj.getCurrentAxesHandle,roiPos,...
+                            @obj.roiCallback);
+                end
+                clearvars roiPos                % clean up
 
                 % and re-enable the disabled controls
                 obj.selection.enable(true);
@@ -3153,6 +3216,8 @@ classdef arrShow < handle
             uimenu(menuHandle,'Label','Jet (j)'      ,'callback',@(src,evnt)cb('jet(256)'));
             uimenu(menuHandle,'Label','YlGnBu_r (y)'     ,'callback',@(src,evnt)cb('YlGnBu_r'));
 			uimenu(menuHandle,'Label','viridis  (alt+v)' ,'callback',@(src,evnt)cb('viridis'));
+			uimenu(menuHandle,'Label','RdBu_r (alt+r)'     ,'callback',@(src,evnt)cb('RdBu_r'));
+			uimenu(menuHandle,'Label','seismic (alt+s)'     ,'callback',@(src,evnt)cb('seismic'));
             if ~verLessThan('matlab','8.4.0')
                 uimenu(menuHandle,'Label','Parula'      ,'callback',@(src,evnt)cb('parula(256)'));
             end
@@ -3696,6 +3761,10 @@ classdef arrShow < handle
                         obj.setColormap('ylgnbu_r');
 					case 'av'
 						obj.setColormap('viridis');
+					case 'as'
+						obj.setColormap('seismic');
+					case 'ar'
+						obj.setColormap('rdbu_r');
                         
                         % windowing
                     case 'cc'
